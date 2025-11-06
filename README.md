@@ -1,50 +1,108 @@
 # Hippocratic AI Coding Assignment
-Welcome to the [Hippocratic AI](https://www.hippocraticai.com) coding assignment
 
-## Instructions
-The attached code is a simple multiple-choice question taker.  We have included sample questions.  Your goal is to make this code "better"
-- Do not modify testbench.py
-- You may do anything you like inside hip_agent.py (or add more files) as long as the interface to testbench.py remains the same
-- You must use GPT 3.5 as the LLM (not gpt 4, or any other model)
-- We included an openai api key. Please don't abuse it.
-- The starter code is based on version 0.27.8 of the openai SDK (included in requirements.txt)
+A multiple-choice question answering system using GPT-3.5.
 
----
+## Project Structure
 
-## Rules
-- This assignment is open-ended. Part of the test is seeing what you decide is important.
-- You may use any resources you like with the following restrictions
-   - They must be resources that would be available to you if you worked here (so no other humans, no closed AIs, no unlicensed code, etc.)
-   - Allowed resources include but not limited to Stack overflow, random blogs, Chatgpt et al. 
-   - Please don't use the LangChain or a similar library (openai client library is allowed to make llm calls). We want to see you code.
-- DO NOT PUSH THE API KEY TO GITHUB. OpenAI will automatically delete it.
-- You may ask questions.
+```
+hippocratic_takehome/
+├── src/                    # Source code
+│   ├── __init__.py
+│   ├── hip_agent.py       # Main agent implementation
+│   └── testbench.py       # Test runner (do not modify)
+├── data/                   # Data files
+│   ├── testbench.csv      # Question and answer data
+│   └── textbook.txt       # Reference textbook
+├── logs/                   # Log files
+├── k8s/                    # Kubernetes deployment files
+├── Dockerfile              # Container configuration
+└── requirements.txt        # Python dependencies
+```
 
----
+## Prerequisites
 
-## What does "Better" mean
+- Python 3.11+
+- OpenAI API key
+- pip
 
-*You* decide what better means, but here are some ideas to help get the brain-juices flowing!
+## Setup
 
-- Improve the score using various well-studied methods
-  - Shots
-  - Chain of thought
-  - Introduce documents and retrieval augmented generation (we included one open source book, but you are welcome to add whatever you like)
-    - The entire book will not fit in GPT 3.5 context window
-    - Read up on embeddings and cosine similarity here https://platform.openai.com/docs/guides/embeddings
-    - There is no need to use a vector db
-  - Web search engine integration
-- Add a front end interface
-- Add testbenches
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd hippocratic_takehome
+   ```
 
----
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## How will I be evaluated
-Good question. We want to know the following
-- Can you code
-- Can you understand and deconstruct a problem
-- Can you operate in an open-ended environment
-- Can you be creative
-- Do you understand what it means to deliver value versus check a box
-- Can you *really* code
-- Can you surprise us
+3. **Set up environment variables**
+   
+   Create a `.env` file in the project root:
+   ```bash
+   echo "OPENAI_API_KEY=your-api-key-here" > .env
+   ```
+   
+   Or export it in your shell:
+   ```bash
+   export OPENAI_API_KEY=your-api-key-here
+   ```
+
+## Running the Project
+
+### Local Execution
+
+Run the testbench to evaluate the agent on the test questions:
+
+```bash
+python src/testbench.py
+```
+
+This will:
+- Load questions from `data/testbench.csv`
+- Run the HIPAgent on each question
+- Display the final score and detailed results
+
+### Docker Execution
+
+Build the Docker image:
+
+```bash
+docker build -t hippocratic-agent .
+```
+
+Run the container:
+
+```bash
+docker run --env-file .env hippocratic-agent
+```
+
+Or pass the API key directly:
+
+```bash
+docker run -e OPENAI_API_KEY=your-api-key-here hippocratic-agent
+```
+
+### Kubernetes Deployment
+
+See the [k8s/README.md](k8s/README.md) for Kubernetes deployment instructions.
+
+## Development
+
+- **Source code**: Modify `src/hip_agent.py` to improve the agent's performance
+- **Test data**: Questions are in `data/testbench.csv`
+- **Reference material**: The textbook is available in `data/textbook.txt`
+
+**Important**: Do not modify `src/testbench.py` as it is the evaluation interface.
+
+## Configuration
+
+- **OpenAI Model**: The agent uses GPT-3.5-turbo (as specified in the assignment)
+- **OpenAI SDK Version**: 0.27.8
+
+## For Assignment Details
+
+See [INSTRUCTIONS.md](INSTRUCTIONS.md) for the full assignment requirements and evaluation criteria.
+
