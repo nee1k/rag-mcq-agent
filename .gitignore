@@ -5,6 +5,7 @@ textbook.txt
 openaikey.txt
 
 # Environment variables
+.venv/
 .env
 .env.local
 .env.*.local
