@@ -1,5 +1,6 @@
 # Data
-textbook.txt
+data/textbook.txt
+logs/
 
 # API Keys and secrets
 openaikey.txt
@@ -30,3 +31,12 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Kubernetes
+k8s/secret.yaml.local
+k8s/configmap.yaml.local
+k8s/job.yaml.local
+k8s/namespace.yaml.local
+
+# 
+/__MACOSX/

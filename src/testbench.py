@@ -3,7 +3,9 @@ from hip_agent import HIPAgent
 
 if __name__=="__main__":
     # Parse the CSV file
-    with open("testbench.csv", "r") as csvfile:
+    import os
+    csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "testbench.csv")
+    with open(csv_path, "r") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         headers = next(reader)
         data = list(reader)
