@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hip-agent-testbench
+  namespace: hip-agent
+spec:
+  template:
+    spec:
+      containers:
+      - name: hip-agent
+        image: hip-agent:latest
+        imagePullPolicy: Never
+        command: ["python", "testbench.py"]
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-api-key
+              key: api-key
+        volumeMounts:
+        - name: config
+          mountPath: /app/testbench.csv
+          subPath: testbench.csv
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      restartPolicy: Never
+      volumes:
+      - name: config
+        configMap:
+          name: hip-agent-config
+  backoffLimit: 2
