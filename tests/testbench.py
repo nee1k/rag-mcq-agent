@@ -1,9 +1,13 @@
 import csv
-from hip_agent import HIPAgent
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from agent.hip_agent import HIPAgent
 
 if __name__=="__main__":
     # Parse the CSV file
-    with open("testbench.csv", "r") as csvfile:
+    with open(os.path.join(os.path.dirname(__file__), '..', 'data', 'testbench.csv'), "r") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         headers = next(reader)
         data = list(reader)

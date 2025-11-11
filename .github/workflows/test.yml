@@ -26,5 +26,5 @@ jobs:
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        python run_tests_with_stats.py
+        python tests/run_tests_with_stats.py
 
