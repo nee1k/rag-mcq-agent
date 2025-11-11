@@ -55,19 +55,29 @@ This project implements an intelligent agent that can answer multiple-choice que
 To evaluate the agent on the sample questions:
 
 ```bash
-python testbench.py
+python tests/testbench.py
 ```
 
 This will:
-1. Load questions from `testbench.csv`
+1. Load questions from `data/testbench.csv`
 2. Run the agent on each question
 3. Compare answers against correct answers
 4. Display the final score and detailed results
 
+### Running with Statistical Validation
+
+For CI/CD or more reliable results, use the statistical validation script:
+
+```bash
+python tests/run_tests_with_stats.py
+```
+
+This runs the testbench multiple times and validates using median score.
+
 ### Using the Agent Programmatically
 
 ```python
-from hip_agent import HIPAgent
+from agent.hip_agent import HIPAgent
 
 agent = HIPAgent()
 question = "What is a GMO?"
@@ -94,7 +104,7 @@ print(f"Answer index: {response_index}")
 
 ## Customization
 
-You can enhance the agent by modifying `hip_agent.py` (or adding new files) as long as the interface to `testbench.py` remains unchanged. The `HIPAgent` class must maintain the `get_response(question, answer_choices)` method signature.
+You can enhance the agent by modifying `agent/hip_agent.py` (or adding new files) as long as the interface to `tests/testbench.py` remains unchanged. The `HIPAgent` class must maintain the `get_response(question, answer_choices)` method signature.
 
 ### Potential Enhancements
 

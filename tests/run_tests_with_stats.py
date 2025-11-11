@@ -6,6 +6,7 @@ Exits with code 0 if median score meets threshold, otherwise exits with code 1.
 import subprocess
 import re
 import sys
+import os
 import statistics
 from typing import List
 
@@ -19,10 +20,15 @@ def extract_score(output: str) -> tuple[int, int]:
 
 def run_testbench() -> tuple[int, int]:
     """Run testbench once and return the (score, total) tuple."""
+    # Get the path to testbench.py
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    testbench_path = os.path.join(script_dir, 'testbench.py')
+    
     result = subprocess.run(
-        ['python', 'testbench.py'],
+        ['python', testbench_path],
         capture_output=True,
-        text=True
+        text=True,
+        cwd=os.path.dirname(script_dir)  # Run from project root
     )
     
     if result.returncode != 0:
