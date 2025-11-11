@@ -1,0 +1,57 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables and secrets
+.env
+.env.*
+.env.local
+openaikey.txt
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (optional, uncomment if you don't need docs in container)
+# docs/
+# README.md
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Tests (optional, uncomment if you don't need tests in container)
+# tests/
+
+# Cache directories
+.cache/
+*.log
+
+# CI/CD
+.github/
+.gitlab-ci.yml
