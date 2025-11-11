@@ -16,6 +16,8 @@ This project implements an intelligent agent that can answer multiple-choice que
 - **Robust Parsing**: Multiple strategies to extract answers from model responses
 - **Testbench Evaluation**: Automated scoring system to evaluate agent performance
 - **RAG Support**: Infrastructure for retrieval-augmented generation (textbook included)
+- **Web Interface**: Streamlit-based UI for CSV upload and interactive testing
+- **Docker Support**: Fully containerized application ready for deployment
 
 ## Requirements
 
@@ -48,6 +50,91 @@ This project implements an intelligent agent that can answer multiple-choice que
    
    **⚠️ Important**: Never commit your API key to version control. The `.gitignore` file is configured to exclude API keys and sensitive files.
 
+## Docker Deployment
+
+The application is containerized and can be easily deployed using Docker.
+
+### Prerequisites
+
+- Docker installed on your system
+- Docker Compose (optional, but recommended)
+
+### Quick Start with Script
+
+The easiest way to get started:
+
+```bash
+# 1. Create .env file with your API key
+echo "OPENAI_API_KEY=your-api-key-here" > .env
+
+# 2. Run the startup script
+./start.sh
+```
+
+The script will automatically build and start the container, then display the URL to access the application.
+
+### Option 1: Using Docker Compose (Recommended)
+
+1. **Create a `.env` file** with your OpenAI API key:
+   ```bash
+   echo "OPENAI_API_KEY=your-api-key-here" > .env
+   ```
+
+2. **Build and run the container**:
+   ```bash
+   docker compose up --build
+   ```
+   Or if using older Docker Compose:
+   ```bash
+   docker-compose up --build
+   ```
+
+3. **Access the application**:
+   Open your browser and navigate to `http://localhost:8501`
+
+4. **Stop the container**:
+   ```bash
+   docker compose down
+   ```
+
+### Option 2: Using Docker CLI
+
+1. **Build the Docker image**:
+   ```bash
+   docker build -t rag-mcq-agent .
+   ```
+
+2. **Run the container**:
+   ```bash
+   docker run -d \
+     --name rag-mcq-agent \
+     -p 8501:8501 \
+     -e OPENAI_API_KEY=your-api-key-here \
+     rag-mcq-agent
+   ```
+
+3. **Access the application**:
+   Open your browser and navigate to `http://localhost:8501`
+
+4. **View logs**:
+   ```bash
+   docker logs -f rag-mcq-agent
+   ```
+
+5. **Stop the container**:
+   ```bash
+   docker stop rag-mcq-agent
+   docker rm rag-mcq-agent
+   ```
+
+### Docker Configuration
+
+- **Port**: The application exposes port 8501 (Streamlit default)
+- **Health Check**: Automatic health monitoring with 30-second intervals
+- **Environment Variables**:
+  - `OPENAI_API_KEY`: Your OpenAI API key (required)
+- **Volumes**: Data directory is mounted read-only for access to testbench files
+
 ## How to Run
 
 ### Running the Testbench
@@ -73,6 +160,26 @@ python tests/run_tests_with_stats.py
 ```
 
 This runs the testbench multiple times and validates using median score.
+
+### Using the Web Interface
+
+Launch the Streamlit web interface for an interactive testing experience:
+
+```bash
+streamlit run app.py
+```
+
+The web interface provides:
+- CSV file upload for batch question processing
+- Real-time progress tracking during evaluation
+- Visual results display with color-coded correct/incorrect answers
+- Detailed breakdown of each question with agent responses
+- Score summary and statistics
+- Option to filter results (all/correct/incorrect only)
+- Export results as CSV
+- Quick start with default testbench file
+
+The interface will open in your browser at `http://localhost:8501`. You can upload any CSV file in the same format as `data/testbench.csv` or use the default testbench file.
 
 ### Using the Agent Programmatically
 
@@ -112,4 +219,4 @@ You can enhance the agent by modifying `agent/hip_agent.py` (or adding new files
 - **Chain of Thought**: Encourage the model to reason through the problem
 - **RAG Implementation**: Use embeddings and cosine similarity to retrieve relevant passages from `textbook.txt`
 - **Web Search**: Integrate web search for additional context
-- **Frontend**: Build a web interface for interactive question answering
+- **Enhanced Frontend**: Add user authentication, question history, and performance analytics
