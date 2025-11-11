@@ -1,4 +1,4 @@
-from openai import AuthenticationError, BadRequestError
+from openai import APIError
 import os
 from typing import List
 from dotenv import load_dotenv
@@ -150,12 +150,18 @@ class HIPAgent:
                 print(f"Warning: Could not parse answer. Falling back to basic mode.")
                 return self._get_response_basic(question, answer_choices)
             return result
-        except AuthenticationError as e:
-            print(f"Error: Invalid API key. Please check your OPENAI_API_KEY environment variable.")
-            return -1
-        except BadRequestError as e:
-            print(f"Error: Invalid request: {e}. Falling back to basic mode.")
-            return self._get_response_basic(question, answer_choices)
+        except APIError as e:
+            # Handle specific API errors using status code
+            status_code = getattr(e, 'status_code', None)
+            if status_code == 401:
+                print(f"Error: Invalid API key. Please check your OPENAI_API_KEY environment variable.")
+                return -1
+            elif status_code == 400:
+                print(f"Error: Invalid request: {e}. Falling back to basic mode.")
+                return self._get_response_basic(question, answer_choices)
+            else:
+                print(f"Error: Unexpected API error: {e}. Falling back to basic mode.")
+                return self._get_response_basic(question, answer_choices)
         except Exception as e:
             print(f"Error: Unexpected error: {e}. Falling back to basic mode.")
             return self._get_response_basic(question, answer_choices)

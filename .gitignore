@@ -1,6 +1,7 @@
 # Data
+.cache/
 data/textbook.txt
-docs/INSTRUCTIONS.md
+docs
 
 # API Keys and secrets
 openaikey.txt
