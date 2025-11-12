@@ -29,7 +29,6 @@ st.markdown("""
 
 # Header
 st.title("Hippocratic AI MCQ Agent")
-st.caption("Multiple Choice Question Evaluation powered by RAG & GPT-3.5")
 
 # Initialize session state
 if 'results' not in st.session_state:
