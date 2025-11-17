@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Benchmarking script to measure accuracy and latency metrics.
-Runs extended_testbench.csv and writes results to a CSV file.
+Runs tests/extended_testbench.csv and writes results to a CSV file.
 """
 
 import csv
@@ -163,8 +163,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--testbench', 
         type=str, 
-        default=os.path.join(script_parent_dir, 'data', 'extended_testbench.csv'),
-        help='Path to testbench CSV file (default: data/extended_testbench.csv)'
+        default=os.path.join(script_parent_dir, 'tests', 'extended_testbench.csv'),
+        help='Path to testbench CSV file (default: tests/extended_testbench.csv)'
     )
     parser.add_argument(
         '--output', 

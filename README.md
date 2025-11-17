@@ -12,9 +12,10 @@ The agent follows a multi-stage pipeline:
 2. **RAG Retrieval**: 
    - Loads and processes textbook from file (normalizes whitespace, preserves structure)
    - Chunks text into structured segments with metadata (text, start_char, end_char, chunk_index)
-   - Calculates SHA256 hash to verify textbook integrity
+   - Calculates a SHA256 hash of the textbook file to detect any modifications
    - Preprocesses and generates embeddings for semantic search
-   - Retrieves top-k most relevant chunks for the query
+   - Retrieves top-k most relevant chunks for the query using vector similarity search (such as FAISS)
+   - Returns both the retrieved chunk texts and their positional metadata (e.g., start/end character indices, chunk index) for accurate context reconstruction
 3. **Prompt Construction**: Builds comprehensive prompt with:
    - Retrieved context chunks
    - Few-shot examples
@@ -30,6 +31,17 @@ The agent follows a multi-stage pipeline:
 
 The evaluation system is handled by [testbench.py](testbench.py), which reads questions, answer choices, and correct answers from [testbench.csv](data/testbench.csv). For each question, the agent predicts an answer by selecting from the provided options. The agent's response is compared to the correct choice, and a point is awarded for each correct match. The final score reflects the number of correct predictions out of the total number of questions.
 
+## Performance
+
+The agent has been optimized with several performance improvements including FAISS vector search, parallel API processing, and binary cache formats. 
+
+All evaluations were conducted using a comprehensive set of multiple-choice biomedical and life science questions. The testing was performed in a virtual machine with 8 vCPUs, 30 GB of RAM, and 60 GB of local storage.
+
+The following visualization shows the accuracy-latency trade-off comparing baseline vs improved configurations:
+
+![Performance Comparison](tests/benchmark_results/performance_comparison.png)
+
+Accuracy increased from 58% to 89%, while latency was reduced by half and throughput almost doubled. All benchmarks were performed with textbook embeddings pre-cached.
 
 
 ## Quick Start
