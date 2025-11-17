@@ -14,7 +14,7 @@ import sys
 # Add parent directory to path
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
-from hip_agent import HIPAgent
+from hip_agent_v0 import HIPAgent
 
 
 def run_benchmark(testbench_path: str, output_path: str = None) -> Dict:

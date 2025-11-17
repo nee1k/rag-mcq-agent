@@ -1,0 +1,101 @@
+question_id,question,correct_answer_idx,agent_response_idx,is_correct,latency_seconds
+1,GMOs are created by ________,1,3,False,0.39682912826538086
+2,Insulin produced by molecular cloning:,1,-1,False,0.574714183807373
+3,The Flavr Savr Tomato:,3,3,True,0.4110400676727295
+4,Linkage analysis ________,1,1,True,0.79433274269104
+5,Individual genetic maps in a given species are:,0,0,True,0.38529348373413086
+6,The chain termination method of sequencing:,0,-1,False,0.5122108459472656
+7,Sequencing an individual person’s genome,3,-1,False,0.7575459480285645
+8,Genomics can be used in agriculture to:,3,-1,False,1.037383794784546
+9,What is a biomarker?,1,-1,False,0.9838447570800781
+10,Which scientific concept did Charles Darwin and Alfred Wallace independently discover?,1,1,True,0.23940110206604004
+11,Which description is an example of a phenotype?,3,0,False,0.3138272762298584
+12,Which situation would most likely lead to allopatric speciation?,0,-1,False,1.012810230255127
+13,Which variable increases the likelihood of allopatric speciation taking place more quickly?,1,-1,False,1.3047990798950195
+14,Which reproductive combination produces hybrids?,2,2,True,0.394439697265625
+15,Which situation is not an example of a prezygotic barrier?,3,3,True,0.358278751373291
+16,Which components of speciation would be least likely to be a part of punctuated equilibrium?,2,-1,False,0.832172155380249
+17,What is the difference between micro- and macroevolution?,2,-1,False,0.9358501434326172
+18,Which of the following populations is not in Hardy-Weinberg equilibrium?,3,-1,False,0.7882823944091797
+19,"When male lions reach sexual maturity, they leave their group in search of a new pride. This can alter the allele frequencies of the population through which of the following mechanisms?",2,2,True,0.2664070129394531
+20,What is assortative mating?,0,-1,False,0.9085094928741455
+21,"What organization provides free, peer-reviewed, openly licensed textbooks for college and Advanced Placement courses?",0,0,True,0.24751615524291992
+22,Which group of prokaryotes have a thick peptidoglycan layer fortified with teichoic acids in their cell wall?,0,0,True,0.2781341075897217
+23,"In plants like moss, which organism is the free-living plant?",1,-1,False,0.2788100242614746
+24,Which zone of the root tip is made up of actively dividing cells?,2,2,True,0.5194413661956787
+25,Which structure acts like a detergent in the airways to reduce surface tension and allow for opening of the alveoli?,0,0,True,0.2935667037963867
+26,Which protein found in red blood cells is comprised of two alpha and two beta subunits surrounding an iron-containing heme group?,0,0,True,0.27389097213745117
+27,"Which clade includes turtles, terrapins, and tortoises?",2,2,True,0.28087496757507324
+28,"Which method do some orchids use to attract pollinators by offering bright colors and perfumes, but no food rewards?",0,3,False,0.2577035427093506
+29,Which term describes a virus that infects bacteria?,2,2,True,0.25611329078674316
+30,What enzyme is responsible for the first chemical reaction in alcohol fermentation?,1,1,True,0.3308560848236084
+31,"During which geological era did ancestors of modern land plants colonize land, according to the passage?",1,1,True,0.2809176445007324
+32,Which of the following viral structures is responsible for attaching the virus to host cells?,2,2,True,0.3275027275085449
+33,"What type of reasoning is illustrated in the statement 'Chromosomes, the carriers of DNA, are distributed evenly between the daughter cells during cell division. Therefore, each daughter cell will have the same chromosome set as the mother cell'?",1,1,True,0.3049650192260742
+34,Which type of immune cell can kill cells infected with viruses or tumor cells?,2,2,True,0.3749122619628906
+35,What are Hox genes responsible for in animals?,0,0,True,0.3890836238861084
+36,"In a dihybrid cross of AABB x aabb with AaBb F1 heterozygotes, what is the ratio of the F1 gametes (AB, aB, Ab, ab) that will give rise to the F2 offspring?",2,0,False,0.28058815002441406
+37,Which reproductive strategy involves the shark laying eggs that hatch outside of the mother's body?,0,0,True,1.4409222602844238
+38,Which protein component of thin filaments blocks the binding sites for myosin and prevent muscle contractions when the muscles are at rest?,2,2,True,0.2732532024383545
+39,Which phenomenon explains why protist classification is challenging?,0,0,True,0.4647040367126465
+40,What are the specialized plastids that contain starch granules and settle downward in response to gravity called?,1,1,True,0.27195310592651367
+41,What marks the beginning and end of each intron in pre-mRNA during the splicing process?,3,3,True,0.44255685806274414
+42,"During cytokinesis in animal cells, what structure is responsible for pinching the cell in two?",1,1,True,0.32297301292419434
+43,What is the main function of enzymes in chemical reactions?,1,-1,False,0.5981383323669434
+44,Which type of substitution occurs when a purine is replaced with a pyrimidine or vice versa?,0,0,True,0.25804686546325684
+45,Which neurotransmitter is thought to be decreased in schizophrenic patients?,0,0,True,0.28046655654907227
+46,Which of the following animals would be classified as an obligate carnivore?,2,2,True,0.6974968910217285
+47,"During menopause, what hormone is involved in calcium metabolism and its deficiency can lead to decreased bone density and osteoporosis?",0,0,True,0.2962632179260254
+48,"In imprinting, hatchling ducks recognize and bond with the first adult they see, which is typically their mother. This is an example of which type of learning?",0,2,False,0.40342092514038086
+49,Which instrument can differentiate which wavelengths of light a substance can absorb?,2,2,True,0.2852609157562256
+50,What type of population change does stage 4 in the age structure diagrams represent?,0,0,True,0.2876145839691162
+51,Which cell zone of the root tip is responsible for actively dividing cells of the root meristem?,2,2,True,0.29381775856018066
+52,In which type of plant is the gametophyte organism physically dependent on the sporophyte?,2,-1,False,1.0309736728668213
+53,Which of the following statements about Protists is true based on the passage?,0,-1,False,0.5348176956176758
+54,What are the core threats to biodiversity according to the passage?,0,-1,False,0.4528696537017822
+55,What is a key characteristic that distinguishes eudicots from monocots?,2,-1,False,0.41000890731811523
+56,What is the main purpose of the photosynthetic organism in a lichen-fungus mutualism?,0,0,True,0.38576531410217285
+57,"Which neurotransmitter, when released at the synapse between a nerve and muscle, causes postsynaptic Na+ channels to open?",0,0,True,0.33425283432006836
+58,Which group of organisms are called extreme lovers because they can survive under extreme conditions?,1,1,True,0.3603353500366211
+59,What method is typically used to count the number of individuals in a population of immobile organisms?,2,2,True,0.41143202781677246
+60,Who coined the term 'cell' for the box-like structures he observed when viewing cork tissue through a lens?,1,-1,False,0.308917760848999
+61,Which part of the brain receives visual information sent to the suprachiasmatic nucleus for the circadian cycle?,1,1,True,0.4331474304199219
+62,Which of the following animals is most likely to have a hydrostatic skeleton?,1,1,True,0.2895023822784424
+63,Which university is mentioned as a leading research university committed to undergraduate education in the passage?,3,3,True,0.3357868194580078
+64,What is the main energy source for chemosynthetic bacteria found in the abyssal zone?,2,-1,False,0.6950030326843262
+65,Which of the following statements about T cells is false?,2,-1,False,0.7211217880249023
+66,"In cell reproduction, what is the process by which a single diploid cell divides into two genetically identical daughter cells?",0,0,True,0.2722299098968506
+67,Which structure in the lungs lacks cartilage and relies on inhaled air to support its shape?,2,2,True,0.38873767852783203
+68,Which organelle carries out photosynthesis in plant cells?,3,3,True,0.2881805896759033
+69,Which system do cells containing hemoglobin circulate in echinoderms?,1,2,False,0.24713873863220215
+70,How are fat-soluble vitamins absorbed in the body?,0,-1,False,0.9283514022827148
+71,What are the three main requirements for prokaryotes to live?,0,0,True,0.3229703903198242
+72,"According to the passage, which of the following statements about evolution is NOT true?",2,0,False,0.3476228713989258
+73,"In Drosophila, what is the wild-type eye color that is dominant to white eye color?",3,0,False,0.25964808464050293
+74,How many olfactory receptors do humans have?,2,2,True,0.3120415210723877
+75,Which developmental pattern is characteristic of protostomes?,1,-1,False,0.4636363983154297
+76,Why might an arctic climate be good for seed storage?,0,-1,False,1.1885623931884766
+77,Which of the following statements about the moss life cycle is false?,1,-1,False,0.9189376831054688
+78,Which type of energy is stored within chemical bonds and releases when those bonds break?,2,1,False,0.42345476150512695
+79,Which technique involves studying the collective genomes of multiple species that grow and interact in an environmental niche?,2,2,True,0.3008387088775635
+80,"Which hormone stimulates the reabsorption of water and sodium ions in the kidney, resulting in increased blood pressure and volume?",3,3,True,0.2834632396697998
+81,"Which factor greatly affects soil formation and structure by producing pores, crevices, and promoting the development of microorganisms around plant roots?",2,-1,False,0.46852993965148926
+82,"What is a graphic representation of a holistic, nonlinear web of primary producers, primary consumers, and higher-level consumers used to describe ecosystem structure and dynamics?",2,2,True,0.28061985969543457
+83,Which of the following is a characteristic unique to the animal kingdom?,0,2,False,0.28440117835998535
+84,"According to the Hardy-Weinberg principle, what conditions must be met for a population's allele and genotype frequencies to remain stable?",2,-1,False,0.4400486946105957
+85,What type of bonds can carbon form with other atoms to satisfy the octet rule?,3,3,True,0.3008878231048584
+86,What is the function of Malpighian tubules in insects?,1,-1,False,0.613013505935669
+87,Which type of fertilization is typically seen in oligochaetes?,2,2,True,0.2961132526397705
+88,"How many neutrons do carbon-12 and carbon-13 have, respectively?",0,-1,False,0.51458740234375
+89,What regulates blood flow through the capillary beds and assists with gas and nutrient exchange?,2,-1,False,1.0154938697814941
+90,Which type of protein helps in food digestion by catabolizing nutrients into monomeric units?,3,3,True,0.2902076244354248
+91,How has DNA sequencing technology contributed to advances in genomics?,0,-1,False,1.1400818824768066
+92,"How do epigenetic changes to chromatin, such as inactivation of one X chromosome in females, impact nucleosome packing?",0,-1,False,0.8259868621826172
+93,Which of the following is NOT one of the four primary types of tissues found in multicellular animals?,3,3,True,0.25040245056152344
+94,"Which type of ecosystem model attempts to quantify the composition, interaction, and dynamics of entire ecosystems in their natural state?",3,3,True,0.6898963451385498
+95,Which type of cell-surface receptor binds a ligand and activates a membrane protein called a G-protein?,2,2,True,0.3099701404571533
+96,Which of the following experiments provided confirmatory evidence that DNA was the genetic material and not proteins?,3,0,False,0.5370604991912842
+97,Which hominin species is believed to have originated in East Africa and was the first to migrate out of Africa?,2,2,True,0.3098580837249756
+98,"In a hypotonic solution, how does water move?",2,2,True,0.3035469055175781
+99,What is the main adaptation of the Karner blue butterfly mentioned in the passage?,1,1,True,0.30562543869018555
+100,"What organization provides free, peer-reviewed, openly licensed textbooks for introductory college and Advanced Placement courses?",3,3,True,0.730858564376831
