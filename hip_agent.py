@@ -1,6 +1,8 @@
 from openai.error import APIError
 import os
-from typing import List
+from typing import List, Tuple
+from threading import Lock
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from agent.textbook_processor import TextbookProcessor
 from agent.retriever import Retriever
@@ -17,7 +19,9 @@ from agent.utils.validators import validate_question, validate_answer_choices
 from agent.config import (
     RAG_SIMILARITY_THRESHOLD,
     RAG_TOP_K_RETRIEVE,
-    RAG_TOP_K_USE
+    RAG_TOP_K_USE,
+    MAX_PARALLEL_WORKERS,
+    PARALLEL_BATCH_SIZE
 )
 
 # Load environment variables from .env file
@@ -27,26 +31,31 @@ class HIPAgent:
     def __init__(self):
         """Initialize HIPAgent with lazy-loaded retriever."""
         self._retriever = None
+        self._retriever_lock = Lock()  # Lock for retriever initialization
         api_key = os.getenv("OPENAI_API_KEY")
         self.api_client = APIClient(api_key)
         self.answer_parser = AnswerParser()
     
     def _get_retriever(self):
-        """Lazy initialize retriever on first use."""
+        """Lazy initialize retriever on first use (thread-safe)."""
         if self._retriever is None:
-            try:
-                # Get absolute path to textbook
-                current_dir = os.path.dirname(os.path.abspath(__file__))
-                textbook_path = os.path.join(current_dir, 'data', 'textbook.txt')
-                textbook_path = os.path.abspath(textbook_path)
-                
-                # Process textbook and create retriever
-                processor = TextbookProcessor(textbook_path)
-                chunks, embeddings = processor.process()
-                self._retriever = Retriever(chunks, embeddings)
-            except Exception as e:
-                print(f"Warning: Could not initialize retriever: {e}. Continuing without RAG.")
-                self._retriever = None
+            with self._retriever_lock:
+                if self._retriever is None:  # Double-check pattern
+                    try:
+                        # Get absolute path to textbook
+                        current_dir = os.path.dirname(os.path.abspath(__file__))
+                        textbook_path = os.path.join(current_dir, 'data', 'textbook.txt')
+                        textbook_path = os.path.abspath(textbook_path)
+                        
+                        # Process textbook and create retriever
+                        processor = TextbookProcessor(textbook_path)
+                        chunks, embeddings = processor.process()
+                        self._retriever = Retriever(chunks, embeddings)
+                        # Pre-warm the retriever's model
+                        self._retriever._get_model()
+                    except Exception as e:
+                        print(f"Warning: Could not initialize retriever: {e}. Continuing without RAG.")
+                        self._retriever = None
         return self._retriever
     
     def _retrieve_context(self, question: str) -> List[dict]:
@@ -107,17 +116,15 @@ class HIPAgent:
             print(f"Error in basic mode: {e}")
             return -1
     
-    def get_response(self, question, answer_choices):
+    def _answer_question(self, question: str, answer_choices: List[str]) -> int:
         """
-        Calls the OpenAI 3.5 API to generate a response to the question.
-        The response is then matched to one of the answer choices and the index of the
-        matching answer choice is returned. If the response does not match any answer choice,
-        -1 is returned.
-
+        Internal method to answer a single question.
+        Extracted from get_response for use in parallel processing.
+        
         Args:
             question: The question to be asked.
             answer_choices: A list of answer choices.
-
+            
         Returns:
             The index of the answer choice that matches the response, or -1 if the response
             does not match any answer choice.
@@ -165,4 +172,58 @@ class HIPAgent:
         except Exception as e:
             print(f"Error: Unexpected error: {e}. Falling back to basic mode.")
             return self._get_response_basic(question, answer_choices)
+    
+    def get_response(self, question, answer_choices):
+        """
+        Calls the OpenAI 3.5 API to generate a response to the question.
+        The response is then matched to one of the answer choices and the index of the
+        matching answer choice is returned. If the response does not match any answer choice,
+        -1 is returned.
+
+        Args:
+            question: The question to be asked.
+            answer_choices: A list of answer choices.
+
+        Returns:
+            The index of the answer choice that matches the response, or -1 if the response
+            does not match any answer choice.
+        """
+        return self._answer_question(question, answer_choices)
+    
+    def get_responses_batch(self, questions: List[Tuple[str, List[str]]], max_workers: int = None) -> List[int]:
+        """
+        Process multiple questions in parallel using ThreadPoolExecutor.
+        
+        Args:
+            questions: List of tuples (question, answer_choices)
+            max_workers: Maximum number of parallel workers (defaults to MAX_PARALLEL_WORKERS)
+            
+        Returns:
+            List of answer indices corresponding to each question
+        """
+        if max_workers is None:
+            max_workers = MAX_PARALLEL_WORKERS
+        
+        # Pre-initialize retriever before parallel processing to avoid race conditions
+        self._get_retriever()
+        
+        results = [None] * len(questions)
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            future_to_index = {
+                executor.submit(self._answer_question, question, answer_choices): idx
+                for idx, (question, answer_choices) in enumerate(questions)
+            }
+            
+            # Collect results as they complete
+            for future in as_completed(future_to_index):
+                idx = future_to_index[future]
+                try:
+                    results[idx] = future.result()
+                except Exception as e:
+                    print(f"Error processing question {idx}: {e}")
+                    results[idx] = -1
+        
+        return results
 

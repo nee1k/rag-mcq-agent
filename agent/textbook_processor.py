@@ -218,73 +218,126 @@ class TextbookProcessor:
         return [np.array(emb) for emb in all_embeddings]
     
     def save_embeddings_cache(self, chunks: List[Dict], embeddings: List[np.ndarray], textbook_hash: str):
-        """Save chunks and embeddings to cache file."""
-        cache_path = os.path.join(self.cache_dir, "textbook_embeddings.json")
-        
-        # Convert numpy arrays to lists for JSON serialization
-        embeddings_list = [emb.tolist() for emb in embeddings]
-        
-        cache_data = {
-            "chunks": chunks,
-            "embeddings": embeddings_list,
-            "metadata": {
-                "textbook_hash": textbook_hash,
-                "model": self.model_name,
-                "chunk_size": 800,
-                "overlap": 50,
-                "num_chunks": len(chunks),
-                "created_at": str(np.datetime64('now'))
-            }
-        }
+        """Save chunks and embeddings to cache files using binary format."""
+        # Use .npz for embeddings (fast binary format for numpy arrays)
+        embeddings_path = os.path.join(self.cache_dir, "textbook_embeddings.npz")
+        # Use .json for chunks and metadata (small, readable)
+        chunks_path = os.path.join(self.cache_dir, "textbook_chunks.json")
         
         try:
-            with open(cache_path, 'w', encoding='utf-8') as f:
+            # Save embeddings as numpy compressed array (much faster than JSON)
+            embeddings_array = np.array(embeddings, dtype=np.float32)
+            np.savez_compressed(embeddings_path, embeddings=embeddings_array)
+            
+            # Save chunks and metadata as JSON (small, readable)
+            cache_data = {
+                "chunks": chunks,
+                "metadata": {
+                    "textbook_hash": textbook_hash,
+                    "model": self.model_name,
+                    "chunk_size": 800,
+                    "overlap": 50,
+                    "num_chunks": len(chunks),
+                    "created_at": str(np.datetime64('now'))
+                }
+            }
+            
+            with open(chunks_path, 'w', encoding='utf-8') as f:
                 json.dump(cache_data, f, indent=2)
-            print(f"Cache saved to {cache_path}")
+            
+            print(f"Cache saved to {embeddings_path} and {chunks_path}")
         except Exception as e:
             print(f"Error saving cache: {e}")
             raise
     
     def load_embeddings_cache(self) -> Optional[Tuple[List[Dict], List[np.ndarray], str]]:
-        """Load chunks and embeddings from cache file."""
-        cache_path = os.path.join(self.cache_dir, "textbook_embeddings.json")
+        """Load chunks and embeddings from cache files (supports both old JSON and new binary format)."""
+        # Try new binary format first
+        embeddings_path = os.path.join(self.cache_dir, "textbook_embeddings.npz")
+        chunks_path = os.path.join(self.cache_dir, "textbook_chunks.json")
         
-        if not os.path.exists(cache_path):
-            return None
+        # Fallback to old JSON format for backward compatibility
+        old_cache_path = os.path.join(self.cache_dir, "textbook_embeddings.json")
         
-        try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
-                cache_data = json.load(f)
-            
-            # Validate cache structure
-            if "chunks" not in cache_data or "embeddings" not in cache_data or "metadata" not in cache_data:
-                print("Warning: Invalid cache structure. Regenerating embeddings.")
-                return None
-            
-            chunks = cache_data["chunks"]
-            embeddings_list = cache_data["embeddings"]
-            embeddings = [np.array(emb) for emb in embeddings_list]
-            textbook_hash = cache_data["metadata"].get("textbook_hash", "")
-            cached_model = cache_data["metadata"].get("model", "")
+        # Try new binary format
+        if os.path.exists(embeddings_path) and os.path.exists(chunks_path):
+            try:
+                # Load embeddings from .npz (fast binary format)
+                with np.load(embeddings_path) as data:
+                    embeddings_array = data['embeddings']
+                    # Convert back to list of arrays
+                    embeddings = [embeddings_array[i] for i in range(len(embeddings_array))]
+                
+                # Load chunks and metadata from JSON
+                with open(chunks_path, 'r', encoding='utf-8') as f:
+                    cache_data = json.load(f)
+                
+                # Validate cache structure
+                if "chunks" not in cache_data or "metadata" not in cache_data:
+                    print("Warning: Invalid cache structure. Regenerating embeddings.")
+                    return None
+                
+                chunks = cache_data["chunks"]
+                textbook_hash = cache_data["metadata"].get("textbook_hash", "")
+                cached_model = cache_data["metadata"].get("model", "")
 
-            # Check if cache was created with the same model
-            if cached_model != self.model_name:
-                print(f"Warning: Cache was created with model '{cached_model}', but using '{self.model_name}'. Regenerating.")
-                return None
-
-            # Validate embeddings exist and have consistent dimensions
-            if embeddings and len(embeddings) > 0:
-                emb_dim = len(embeddings[0])
-                if emb_dim == 0:
-                    print(f"Warning: Invalid embedding dimension {emb_dim}. Regenerating.")
+                # Check if cache was created with the same model
+                if cached_model != self.model_name:
+                    print(f"Warning: Cache was created with model '{cached_model}', but using '{self.model_name}'. Regenerating.")
                     return None
 
-            print(f"Loaded {len(chunks)} chunks from cache (model: {cached_model})")
-            return chunks, embeddings, textbook_hash
-            
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
-            print(f"Error loading cache: {e}. Regenerating embeddings.")
-            return None
+                # Validate embeddings exist and have consistent dimensions
+                if embeddings and len(embeddings) > 0:
+                    emb_dim = len(embeddings[0])
+                    if emb_dim == 0:
+                        print(f"Warning: Invalid embedding dimension {emb_dim}. Regenerating.")
+                        return None
+
+                print(f"Loaded {len(chunks)} chunks from cache (model: {cached_model})")
+                return chunks, embeddings, textbook_hash
+                
+            except (KeyError, ValueError, OSError, json.JSONDecodeError) as e:
+                print(f"Error loading binary cache: {e}. Trying old format...")
+                # Fall through to try old format
+        
+        # Fallback to old JSON format for backward compatibility
+        if os.path.exists(old_cache_path):
+            try:
+                with open(old_cache_path, 'r', encoding='utf-8') as f:
+                    cache_data = json.load(f)
+                
+                # Validate cache structure
+                if "chunks" not in cache_data or "embeddings" not in cache_data or "metadata" not in cache_data:
+                    print("Warning: Invalid cache structure. Regenerating embeddings.")
+                    return None
+                
+                chunks = cache_data["chunks"]
+                embeddings_list = cache_data["embeddings"]
+                embeddings = [np.array(emb, dtype=np.float32) for emb in embeddings_list]
+                textbook_hash = cache_data["metadata"].get("textbook_hash", "")
+                cached_model = cache_data["metadata"].get("model", "")
+
+                # Check if cache was created with the same model
+                if cached_model != self.model_name:
+                    print(f"Warning: Cache was created with model '{cached_model}', but using '{self.model_name}'. Regenerating.")
+                    return None
+
+                # Validate embeddings exist and have consistent dimensions
+                if embeddings and len(embeddings) > 0:
+                    emb_dim = len(embeddings[0])
+                    if emb_dim == 0:
+                        print(f"Warning: Invalid embedding dimension {emb_dim}. Regenerating.")
+                        return None
+
+                print(f"Loaded {len(chunks)} chunks from old JSON cache (model: {cached_model})")
+                # Migrate to new format on next save
+                return chunks, embeddings, textbook_hash
+                
+            except (json.JSONDecodeError, KeyError, ValueError) as e:
+                print(f"Error loading old cache: {e}. Regenerating embeddings.")
+                return None
+        
+        return None
     
     def process(self, force_regenerate: bool = False) -> Tuple[List[Dict], List[np.ndarray]]:
         """

@@ -39,17 +39,18 @@ if 'processing_time' not in st.session_state:
     st.session_state.processing_time = None
 
 def process_questions(data, headers):
-    """Process questions and return results."""
+    """Process questions and return results using parallel processing."""
     if st.session_state.agent is None:
         st.session_state.agent = HIPAgent()
     
     agent = st.session_state.agent
-    results = []
     progress_bar = st.progress(0)
     
-    for idx, row in enumerate(data):
-        progress_bar.progress((idx + 1) / len(data))
-        
+    # Prepare questions for batch processing
+    questions = []
+    question_metadata = []
+    
+    for row in data:
         question_id = row[headers.index("id")]
         question = row[headers.index("question")]
         answer_choices = [
@@ -60,20 +61,40 @@ def process_questions(data, headers):
         ]
         correct_answer_text = row[headers.index("correct")]
         correct_answer_idx = answer_choices.index(correct_answer_text)
-        response_idx = agent.get_response(question, answer_choices)
-        is_correct = response_idx == correct_answer_idx
         
-        results.append({
+        questions.append((question, answer_choices))
+        question_metadata.append({
             'id': question_id,
             'question': question,
             'answer_choices': answer_choices,
-            'agent_response_idx': response_idx,
-            'agent_response_text': answer_choices[response_idx] if 0 <= response_idx < len(answer_choices) else "Invalid response",
             'correct_answer_idx': correct_answer_idx,
-            'correct_answer_text': correct_answer_text,
+            'correct_answer_text': correct_answer_text
+        })
+    
+    # Process questions in parallel
+    progress_bar.progress(0.1)
+    from agent.config import MAX_PARALLEL_WORKERS
+    response_indices = agent.get_responses_batch(questions, max_workers=MAX_PARALLEL_WORKERS)
+    progress_bar.progress(0.9)
+    
+    # Build results
+    results = []
+    for idx, metadata in enumerate(question_metadata):
+        response_idx = response_indices[idx]
+        is_correct = response_idx == metadata['correct_answer_idx']
+        
+        results.append({
+            'id': metadata['id'],
+            'question': metadata['question'],
+            'answer_choices': metadata['answer_choices'],
+            'agent_response_idx': response_idx,
+            'agent_response_text': metadata['answer_choices'][response_idx] if 0 <= response_idx < len(metadata['answer_choices']) else "Invalid response",
+            'correct_answer_idx': metadata['correct_answer_idx'],
+            'correct_answer_text': metadata['correct_answer_text'],
             'is_correct': is_correct
         })
     
+    progress_bar.progress(1.0)
     progress_bar.empty()
     return results
 
