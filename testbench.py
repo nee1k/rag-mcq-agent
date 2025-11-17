@@ -1,5 +1,6 @@
 import csv
 from hip_agent import HIPAgent
+from agent.config import MAX_PARALLEL_WORKERS
 
 if __name__=="__main__":
     # Parse the CSV file
@@ -8,22 +9,24 @@ if __name__=="__main__":
         headers = next(reader)
         data = list(reader)
 
-    # Get the correct answers
+    # Get the correct answers and prepare questions
     correct_answers = []
-
-    # Instantiate a HIP agent
-    agent = HIPAgent()
-
-    # Get the user's responses
-    user_responses = []
+    questions = []
+    
     for row in data:
         answer_choices = [row[headers.index("answer_0")],
                         row[headers.index("answer_1")],
                         row[headers.index("answer_2")],
                         row[headers.index("answer_3")]]
         correct_answers.append(answer_choices.index(row[headers.index("correct")]))
-        response = agent.get_response(row[headers.index("question")], answer_choices)
-        user_responses.append(response)
+        questions.append((row[headers.index("question")], answer_choices))
+
+    # Instantiate a HIP agent
+    agent = HIPAgent()
+
+    # Process questions in parallel
+    print(f"Processing {len(questions)} questions with {MAX_PARALLEL_WORKERS} parallel workers...")
+    user_responses = agent.get_responses_batch(questions, max_workers=MAX_PARALLEL_WORKERS)
 
     # Calculate the score
     score = 0

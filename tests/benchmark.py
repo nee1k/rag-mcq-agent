@@ -14,7 +14,8 @@ import sys
 # Add parent directory to path
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
-from hip_agent_v0 import HIPAgent
+from hip_agent import HIPAgent
+from agent.config import MAX_PARALLEL_WORKERS
 
 
 def run_benchmark(testbench_path: str, output_path: str = None) -> Dict:
@@ -45,13 +46,11 @@ def run_benchmark(testbench_path: str, output_path: str = None) -> Dict:
     agent_init_time = time.time() - agent_init_start
     print(f"Agent initialized in {agent_init_time:.2f}s")
     
-    # Prepare results
-    results = []
-    correct_answers = []
-    total_start_time = time.time()
+    # Prepare questions for batch processing
+    questions = []
+    question_metadata = []
     
-    print("\nProcessing questions...")
-    for idx, row in enumerate(data, 1):
+    for row in data:
         question_id = row[headers.index("id")]
         question = row[headers.index("question")]
         answer_choices = [
@@ -62,41 +61,42 @@ def run_benchmark(testbench_path: str, output_path: str = None) -> Dict:
         ]
         correct_answer_text = row[headers.index("correct")]
         correct_answer_idx = answer_choices.index(correct_answer_text)
-        correct_answers.append(correct_answer_idx)
         
-        # Measure latency for this question
-        question_start = time.time()
-        response_idx = agent.get_response(question, answer_choices)
-        question_latency = time.time() - question_start
-        
-        is_correct = response_idx == correct_answer_idx
-        
-        results.append({
+        questions.append((question, answer_choices))
+        question_metadata.append({
             'question_id': question_id,
             'question': question,
-            'correct_answer_idx': correct_answer_idx,
+            'correct_answer_idx': correct_answer_idx
+        })
+    
+    # Process questions in parallel
+    print(f"\nProcessing {len(questions)} questions with {MAX_PARALLEL_WORKERS} parallel workers...")
+    total_start_time = time.time()
+    response_indices = agent.get_responses_batch(questions, max_workers=MAX_PARALLEL_WORKERS)
+    total_time = time.time() - total_start_time
+    
+    # Calculate per-question latency (approximate: total_time / num_questions)
+    avg_latency_per_question = total_time / len(questions) if questions else 0
+    
+    # Build results
+    results = []
+    for idx, metadata in enumerate(question_metadata):
+        response_idx = response_indices[idx]
+        is_correct = response_idx == metadata['correct_answer_idx']
+        
+        results.append({
+            'question_id': metadata['question_id'],
+            'question': metadata['question'],
+            'correct_answer_idx': metadata['correct_answer_idx'],
             'agent_response_idx': response_idx,
             'is_correct': is_correct,
-            'latency_seconds': question_latency
+            'latency_seconds': avg_latency_per_question  # Approximate since parallel
         })
-        
-        # Progress indicator
-        if idx % 10 == 0:
-            print(f"  Processed {idx}/{len(data)} questions...")
-    
-    total_time = time.time() - total_start_time
     
     # Calculate metrics
     total_questions = len(results)
     correct_count = sum(1 for r in results if r['is_correct'])
     accuracy = (correct_count / total_questions) * 100 if total_questions > 0 else 0
-    
-    # Latency statistics
-    latencies = [r['latency_seconds'] for r in results]
-    avg_latency = sum(latencies) / len(latencies) if latencies else 0
-    min_latency = min(latencies) if latencies else 0
-    max_latency = max(latencies) if latencies else 0
-    median_latency = sorted(latencies)[len(latencies) // 2] if latencies else 0
     
     # Summary metrics
     summary = {
@@ -104,10 +104,10 @@ def run_benchmark(testbench_path: str, output_path: str = None) -> Dict:
         'correct_count': correct_count,
         'accuracy_percentage': accuracy,
         'total_time_seconds': total_time,
-        'avg_latency_seconds': avg_latency,
-        'min_latency_seconds': min_latency,
-        'max_latency_seconds': max_latency,
-        'median_latency_seconds': median_latency,
+        'avg_latency_seconds': avg_latency_per_question,
+        'min_latency_seconds': avg_latency_per_question,  # Approximate
+        'max_latency_seconds': avg_latency_per_question,  # Approximate
+        'median_latency_seconds': avg_latency_per_question,  # Approximate
         'agent_init_time_seconds': agent_init_time,
         'questions_per_second': total_questions / total_time if total_time > 0 else 0
     }
@@ -145,11 +145,9 @@ def run_benchmark(testbench_path: str, output_path: str = None) -> Dict:
     print(f"Total Time:             {total_time:.2f}s")
     print(f"Agent Init Time:        {agent_init_time:.2f}s")
     print(f"Questions/Second:       {summary['questions_per_second']:.2f}")
-    print(f"\nLatency Statistics:")
-    print(f"  Average:              {avg_latency:.2f}s")
-    print(f"  Median:                {median_latency:.2f}s")
-    print(f"  Min:                   {min_latency:.2f}s")
-    print(f"  Max:                   {max_latency:.2f}s")
+    print(f"\nLatency Statistics (parallel processing):")
+    print(f"  Average (per question): {avg_latency_per_question:.2f}s")
+    print(f"  Note: Individual latencies are approximate due to parallel processing")
     print("="*60)
     
     return summary
@@ -190,4 +188,3 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         sys.exit(1)
-

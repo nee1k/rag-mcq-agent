@@ -2,6 +2,7 @@ from sentence_transformers import SentenceTransformer
 import os
 import numpy as np
 from typing import List, Dict, Optional
+from threading import Lock
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -35,6 +36,8 @@ class Retriever:
         self.embeddings = np.array(embeddings, dtype=np.float32)
         self.model_name = model_name
         self._model = None
+        self._model_lock = Lock()  # Lock for model initialization
+        self._encode_lock = Lock()  # Lock for encoding operations
         self._query_embedding_cache = {}  # Cache for query embeddings
 
         # Pre-normalize embeddings for cosine similarity
@@ -45,9 +48,16 @@ class Retriever:
         self._faiss_index = self._build_faiss_index(self._normalized_embeddings) if self._use_faiss else None
 
     def _get_model(self) -> SentenceTransformer:
-        """Lazy load the embedding model."""
+        """Lazy load the embedding model (thread-safe)."""
         if self._model is None:
-            self._model = SentenceTransformer(self.model_name)
+            with self._model_lock:
+                if self._model is None:  # Double-check pattern
+                    self._model = SentenceTransformer(self.model_name)
+                    # Pre-warm the model to avoid meta tensor issues
+                    try:
+                        self._model.encode("warmup", convert_to_numpy=True)
+                    except Exception:
+                        pass  # Ignore warmup errors
         return self._model
     
     def _get_query_embedding(self, query: str) -> np.ndarray:
@@ -66,7 +76,9 @@ class Retriever:
 
         try:
             model = self._get_model()
-            embedding = model.encode(query, convert_to_numpy=True)
+            # Lock encoding operations to prevent concurrent access
+            with self._encode_lock:
+                embedding = model.encode(query, convert_to_numpy=True)
             self._query_embedding_cache[query] = embedding
             return embedding
         except Exception as e:
