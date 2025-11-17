@@ -8,7 +8,7 @@ from datetime import datetime
 
 # Add parent directory to path to import agent modules
 sys.path.insert(0, os.path.dirname(__file__))
-from agent.hip_agent import HIPAgent
+from hip_agent import HIPAgent
 
 # Page configuration
 st.set_page_config(

@@ -20,9 +20,10 @@ def extract_score(output: str) -> tuple[int, int]:
 
 def run_testbench() -> tuple[int, int]:
     """Run testbench once and return the (score, total) tuple."""
-    # Get the path to testbench.py
+    # Get the path to testbench.py (now in project root)
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    testbench_path = os.path.join(script_dir, 'testbench.py')
+    project_root = os.path.dirname(script_dir)
+    testbench_path = os.path.join(project_root, 'testbench.py')
     
     result = subprocess.run(
         ['python', testbench_path],

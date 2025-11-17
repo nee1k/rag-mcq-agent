@@ -1,20 +1,20 @@
-from openai import APIError
+from openai.error import APIError
 import os
 from typing import List
 from dotenv import load_dotenv
-from .textbook_processor import TextbookProcessor
-from .retriever import Retriever
-from .prompts import (
+from agent.textbook_processor import TextbookProcessor
+from agent.retriever import Retriever
+from agent.prompts import (
     build_main_prompt,
     build_basic_prompt,
     format_context_section,
     format_few_shot_section,
     format_few_shot_examples
 )
-from .utils.api_client import APIClient
-from .utils.answer_parser import AnswerParser
-from .utils.validators import validate_question, validate_answer_choices
-from .config import (
+from agent.utils.api_client import APIClient
+from agent.utils.answer_parser import AnswerParser
+from agent.utils.validators import validate_question, validate_answer_choices
+from agent.config import (
     RAG_SIMILARITY_THRESHOLD,
     RAG_TOP_K_RETRIEVE,
     RAG_TOP_K_USE
@@ -37,7 +37,7 @@ class HIPAgent:
             try:
                 # Get absolute path to textbook
                 current_dir = os.path.dirname(os.path.abspath(__file__))
-                textbook_path = os.path.join(current_dir, '..', 'data', 'textbook.txt')
+                textbook_path = os.path.join(current_dir, 'data', 'textbook.txt')
                 textbook_path = os.path.abspath(textbook_path)
                 
                 # Process textbook and create retriever
@@ -165,3 +165,4 @@ class HIPAgent:
         except Exception as e:
             print(f"Error: Unexpected error: {e}. Falling back to basic mode.")
             return self._get_response_basic(question, answer_choices)
+
