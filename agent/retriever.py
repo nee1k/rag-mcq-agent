@@ -7,6 +7,13 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+try:
+    import faiss
+    _HAS_FAISS = True
+except ImportError:
+    faiss = None  # type: ignore
+    _HAS_FAISS = False
+
 
 class Retriever:
     """Retrieves relevant chunks using cosine similarity."""
@@ -24,10 +31,18 @@ class Retriever:
             raise ValueError(f"Chunks ({len(chunks)}) and embeddings ({len(embeddings)}) must have same length")
 
         self.chunks = chunks
-        self.embeddings = np.array(embeddings)  # Convert to numpy array for efficient operations
+        # Ensure embeddings are float32 for FAISS compatibility
+        self.embeddings = np.array(embeddings, dtype=np.float32)
         self.model_name = model_name
         self._model = None
         self._query_embedding_cache = {}  # Cache for query embeddings
+
+        # Pre-normalize embeddings for cosine similarity
+        self._normalized_embeddings = self._normalize_vectors(self.embeddings)
+
+        # Build FAISS index if available
+        self._use_faiss = _HAS_FAISS and len(self._normalized_embeddings) > 0
+        self._faiss_index = self._build_faiss_index(self._normalized_embeddings) if self._use_faiss else None
 
     def _get_model(self) -> SentenceTransformer:
         """Lazy load the embedding model."""
@@ -61,25 +76,28 @@ class Retriever:
             emb_dim = len(self.embeddings[0]) if len(self.embeddings) > 0 else 384
             return np.zeros(emb_dim)
     
-    def _cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
-        """
-        Calculate cosine similarity between two vectors.
-        
-        Args:
-            vec1: First vector
-            vec2: Second vector
-            
-        Returns:
-            Cosine similarity score between -1 and 1
-        """
-        dot_product = np.dot(vec1, vec2)
-        norm1 = np.linalg.norm(vec1)
-        norm2 = np.linalg.norm(vec2)
-        
-        if norm1 == 0 or norm2 == 0:
-            return 0.0
-        
-        return dot_product / (norm1 * norm2)
+    def _normalize_vectors(self, vectors: np.ndarray) -> np.ndarray:
+        """Normalize vectors to unit length (safe for zero vectors)."""
+        norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        return vectors / norms
+
+    def _normalize_vector(self, vector: np.ndarray) -> np.ndarray:
+        """Normalize a single vector."""
+        norm = np.linalg.norm(vector)
+        if norm == 0:
+            return vector
+        return vector / norm
+
+    def _build_faiss_index(self, normalized_embeddings: np.ndarray):
+        """Build FAISS index for fast similarity search."""
+        if not _HAS_FAISS:
+            return None
+
+        dim = normalized_embeddings.shape[1]
+        index = faiss.IndexFlatIP(dim)
+        index.add(normalized_embeddings)
+        return index
     
     def _find_top_k(self, query_embedding: np.ndarray, top_k: int) -> List[tuple[int, float]]:
         """
@@ -92,15 +110,11 @@ class Retriever:
         Returns:
             List of tuples (chunk_index, similarity_score) sorted by similarity (descending)
         """
-        # Calculate cosine similarities for all chunks
-        # Use vectorized operations for efficiency
-        dot_products = np.dot(self.embeddings, query_embedding)
-        norms_query = np.linalg.norm(query_embedding)
-        norms_chunks = np.linalg.norm(self.embeddings, axis=1)
-        
-        # Avoid division by zero
-        denominators = norms_query * norms_chunks
-        similarities = np.where(denominators > 0, dot_products / denominators, 0.0)
+        if len(self._normalized_embeddings) == 0:
+            return []
+
+        normalized_query = self._normalize_vector(query_embedding)
+        similarities = np.dot(self._normalized_embeddings, normalized_query)
         
         # Get top-k indices
         top_k_indices = np.argsort(similarities)[::-1][:top_k]
@@ -130,9 +144,21 @@ class Retriever:
         try:
             # Generate query embedding
             query_embedding = self._get_query_embedding(query)
-            
-            # Find top-k chunks
-            top_k_results = self._find_top_k(query_embedding, min(top_k, len(self.chunks)))
+            normalized_query = self._normalize_vector(query_embedding.astype(np.float32))
+
+            # Choose FAISS or numpy for similarity search
+            if self._use_faiss and self._faiss_index is not None:
+                distances, indices = self._faiss_index.search(
+                    np.array([normalized_query], dtype=np.float32),
+                    min(top_k, len(self.chunks))
+                )
+                top_k_results = [
+                    (int(idx), float(dist))
+                    for idx, dist in zip(indices[0], distances[0])
+                    if idx != -1
+                ]
+            else:
+                top_k_results = self._find_top_k(normalized_query, min(top_k, len(self.chunks)))
             
             # Build result list with similarity scores
             results = []

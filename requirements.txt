@@ -2,5 +2,6 @@ openai==0.27.8
 python-dotenv
 numpy
 sentence-transformers
+faiss-cpu
 streamlit
 pandas
