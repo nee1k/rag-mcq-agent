@@ -2,6 +2,8 @@
 
 A Retrieval-Augmented Generation (RAG) system for answering multiple-choice questions using context from a reference textbook. The agent combines semantic search with large language models to provide accurate answers to medical and scientific questions.
 
+![Architecture Diagram](data/image.png)
+
 ## Architecture
 
 The agent follows a multi-stage pipeline:
