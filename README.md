@@ -1,45 +1,42 @@
 # RAG MCQ Agent
 
-## Working
-- Validate inputs, answer choices.
-- Retrieve context using RAG
-   - Get absolute path to textbook
-   - Processes textbook into chunks and generates embeddings
-      - Load textbook from file. Normalize whitespace but preserve structure
-      - Chunk text into List of chunk dictionaries with text, start_char, end_char, chunk_index
-      - Calculate SHA256 hash of textbook content to Verify textbook hasn't changed.
-      - Peprocessing textbook
-      - Chunking textbook
-      - Generating embeddings
-   - Retrieve top-k most relevant chunks for a query.
-   - Build Prompt (Context, Few shots)
-   - Call OpenAI API to get response for the question
-   - Extract answer
-      - CoT pattern matching (look for "Therefore", "Answer:", etc.)
-      - Extract letter using regex (case-insensitive)
-      - Extract number (0-3)
-      - Fuzzy match - search for substrings matching answer choices
+A Retrieval-Augmented Generation (RAG) system for answering multiple-choice questions using context from a reference textbook. The agent combines semantic search with large language models to provide accurate answers to medical and scientific questions.
+
+## Architecture
+
+The agent follows a multi-stage pipeline:
+
+1. **Input Validation**: Validates question and answer choices format
+2. **RAG Retrieval**: 
+   - Loads and processes textbook from file (normalizes whitespace, preserves structure)
+   - Chunks text into structured segments with metadata (text, start_char, end_char, chunk_index)
+   - Calculates SHA256 hash to verify textbook integrity
+   - Preprocesses and generates embeddings for semantic search
+   - Retrieves top-k most relevant chunks for the query
+3. **Prompt Construction**: Builds comprehensive prompt with:
+   - Retrieved context chunks
+   - Few-shot examples
+   - Chain-of-thought reasoning instructions
+4. **LLM Inference**: Calls OpenAI API (GPT-3.5-turbo) to generate response
+5. **Answer Extraction**: Multi-strategy parsing:
+   - Chain-of-thought pattern matching (looks for "Therefore", "Answer:", etc.)
+   - Letter extraction using regex (case-insensitive)
+   - Number extraction (0-3)
+   - Fuzzy matching for substrings matching answer choices
 
 ## Evaluation
-The evaluation process is handled by [testbench.py](testbench.py), which reads questions, answer choices, and correct answers from [testbench.csv](data/testbench.csv). For each question, the agent predicts an answer by selecting from the provided options. The agent's response is compared to the correct choice, and a point is awarded for each correct match. The final score reflects the number of correct predictions out of the total number of questions.
 
-All testbench run results are automatically stored in a PostgreSQL database. Each run is assigned a unique UUID, and results are stored with timestamps for historical analysis.
+The evaluation system is handled by [testbench.py](testbench.py), which reads questions, answer choices, and correct answers from [testbench.csv](data/testbench.csv). For each question, the agent predicts an answer by selecting from the provided options. The agent's response is compared to the correct choice, and a point is awarded for each correct match. The final score reflects the number of correct predictions out of the total number of questions.
+
 
 
 ## Quick Start
 
-### Using Docker (Recommended)
+### Using Docker
 
 1. **Create `.env` file**:
    ```bash
    echo "OPENAI_API_KEY=your-api-key-here" > .env
-   ```
-   
-   Optional: Configure PostgreSQL connection (defaults provided):
-   ```bash
-   echo "POSTGRES_DB=rag_mcq_agent" >> .env
-   echo "POSTGRES_USER=rag_mcq_user" >> .env
-   echo "POSTGRES_PASSWORD=rag_mcq_password" >> .env
    ```
 
 2. **Start the application**:
@@ -62,15 +59,6 @@ All testbench run results are automatically stored in a PostgreSQL database. Eac
    echo "OPENAI_API_KEY=your-api-key-here" > .env
    ```
    
-   For local PostgreSQL (if not using Docker):
-   ```bash
-   echo "POSTGRES_HOST=localhost" >> .env
-   echo "POSTGRES_PORT=5432" >> .env
-   echo "POSTGRES_DB=rag_mcq_agent" >> .env
-   echo "POSTGRES_USER=your_db_user" >> .env
-   echo "POSTGRES_PASSWORD=your_db_password" >> .env
-   ```
-
 3. **Run the web interface**:
    ```bash
    streamlit run app.py
@@ -78,39 +66,41 @@ All testbench run results are automatically stored in a PostgreSQL database. Eac
 
 ## Requirements
 
-- Python 3.10+ (or Docker)
-- OpenAI API key
-- Dependencies: See `requirements.txt`
+- **Python**: 3.10 or higher (or Docker)
+- **OpenAI API Key**: Required for LLM inference
+- **PostgreSQL**: Optional for local development (included in Docker Compose)
+- **Dependencies**: See `requirements.txt` for full list
 
 ## Usage
 
 ### Web Interface
 
-The Streamlit web interface provides:
+The Streamlit web interface (`app.py`) provides a user-friendly way to interact with the agent:
 
-- **CSV Upload**: Upload your own CSV file with MCQ questions
-- **Default Testbench**: Quick start with pre-loaded test questions
-- **Real-time Processing**: Progress tracking during evaluation
-- **Results Dashboard**: Metrics, filtering, and detailed question analysis
-- **Export Results**: Download results as CSV
+- **CSV Upload**: Upload your own CSV file with MCQ questions for evaluation
+- **Default Testbench**: Quick start with pre-loaded test questions from `data/testbench.csv`
+- **Real-time Processing**: Progress tracking during evaluation with live updates
+- **Results Dashboard**: Comprehensive metrics, filtering, and detailed question-by-question analysis
+- **Export Results**: Download evaluation results as CSV for further analysis
 
-**CSV Format**:
+**CSV Format** (required columns):
 ```csv
 id,question,answer_0,answer_1,answer_2,answer_3,correct
 1,"What is a GMO?","A genetically modified organism","A type of protein","A DNA sequence","None of the above","A genetically modified organism"
 ```
 
+- `id`: Unique question identifier
+- `question`: The question text
+- `answer_0` through `answer_3`: Four answer choices
+- `correct`: The correct answer (must match one of the answer choices exactly)
+
 ### Command Line Testing
 
-**Run testbench**:
+**Run testbench** (basic evaluation):
 ```bash
 python testbench.py
 ```
 
-**Run with statistical validation** (for CI/CD):
-```bash
-python tests/run_tests_with_stats.py
-```
 
 ### Programmatic Usage
 
@@ -171,85 +161,45 @@ docker stop rag-mcq-agent && docker rm rag-mcq-agent
 
 - **Port**: 8501 (Streamlit default)
 - **Health Check**: Automatic monitoring every 30 seconds
-- **Environment**: `OPENAI_API_KEY` required (via `.env` file)
-- **Image Size**: ~150MB (CPU-only PyTorch optimized)
-- **PostgreSQL**: Included as a service in docker-compose, automatically starts with the application
-
-### Database
-
-The application uses PostgreSQL to store testbench results. When using Docker Compose, PostgreSQL is automatically configured and started. The database includes two tables:
-
-- **`questions`**: Stores question data from the testbench CSV (id, question, answer choices, correct answer)
-- **`runs`**: Stores individual question results for each testbench execution (run_id, question_id, user_response, is_correct, timestamp)
-
-**Database Environment Variables**:
-- `POSTGRES_HOST` (default: `postgres` in Docker, `localhost` locally)
-- `POSTGRES_PORT` (default: `5432`)
-- `POSTGRES_DB` (default: `rag_mcq_agent`)
-- `POSTGRES_USER` (default: `rag_mcq_user`)
-- `POSTGRES_PASSWORD` (default: `rag_mcq_password`)
-
-Tables are automatically created on first run. Database data persists in a Docker volume (`postgres_data`).
-
+- **Environment Variables**: `OPENAI_API_KEY` required (via `.env` file)
+- **Image Size**: ~150MB
 ## How It Works
 
-1. **Question Processing**: Receives question and answer choices
-2. **RAG Retrieval**: Retrieves relevant context from textbook using embeddings
-3. **Prompt Construction**: Builds prompt with context, few-shot examples, and chain-of-thought reasoning
-4. **API Call**: Sends to GPT-3.5-turbo via OpenAI API
-5. **Answer Extraction**: Uses multiple parsing strategies (regex, fuzzy matching)
-6. **Response**: Returns answer index (0-3) or -1 if no match
+The agent processes questions through the following workflow:
+
+1. **Question Processing**: Receives question and answer choices, validates input format
+2. **RAG Retrieval**: Retrieves relevant context from textbook using semantic embeddings
+3. **Prompt Construction**: Builds comprehensive prompt with context, few-shot examples, and chain-of-thought reasoning instructions
+4. **API Call**: Sends prompt to GPT-3.5-turbo via OpenAI API
+5. **Answer Extraction**: Uses multiple parsing strategies (regex, fuzzy matching, pattern recognition)
+6. **Response**: Returns answer index (0-3) corresponding to the selected choice, or -1 if no valid match is found
 
 ## Project Structure
 
 ```
 rag-mcq-agent/
-├── agent/              # Core agent implementation
-│   ├── retriever.py   # RAG retrieval logic
-│   └── prompts.py     # Prompt construction
-├── data/              # Test data and textbook
-│   ├── testbench.csv  # Sample questions
-│   └── textbook.txt   # Reference textbook
-├── tests/             # Test scripts
+├── agent/                    # Core agent implementation
+│   ├── __init__.py
+│   ├── config.py            # Configuration constants
+│   ├── retriever.py         # RAG retrieval logic
+│   ├── prompts.py           # Prompt construction
+│   ├── textbook_processor.py # Textbook processing and chunking
+│   └── utils/               # Utility modules
+│       ├── answer_parser.py # Answer extraction logic
+│       ├── api_client.py    # OpenAI API client
+│       └── validators.py    # Input validation
+├── data/                    # Test data and textbook
+│   ├── testbench.csv        # Sample questions
+│   └── textbook.txt         # Reference textbook
+├── tests/                   # Test scripts
 │   └── run_tests_with_stats.py  # Statistical test runner
-├── app.py            # Streamlit web interface
-├── testbench.py      # Evaluation script
-├── hip_agent.py      # Main agent class
-├── Dockerfile        # Docker configuration
-└── requirements.txt  # Python dependencies
+├── scripts/                 # Utility scripts
+│   └── generate_questions.py
+├── docs/                    # Documentation
+├── app.py                   # Streamlit web interface
+├── testbench.py             # Evaluation script
+├── hip_agent.py             # Main agent class
+├── Dockerfile               # Docker configuration
+├── docker-compose.yml       # Docker Compose configuration
+└── requirements.txt         # Python dependencies
 ```
-
-## Customization
-
-The agent can be enhanced by modifying `hip_agent.py` while maintaining the `get_response(question, answer_choices)` interface.
-
-**Potential Enhancements**:
-- Few-shot learning examples
-- Chain-of-thought reasoning
-- Enhanced RAG retrieval strategies
-- Web search integration
-- Performance analytics
-
-## Testing
-
-The project includes automated testing with statistical validation:
-
-- **Threshold**: 70% accuracy (median score)
-- **Runs**: 3 iterations for statistical reliability
-- **CI/CD**: Integrated with GitHub Actions
-
-## License
-
-See LICENSE file for details.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Ensure tests pass
-5. Submit a pull request
-
-## Security
-
-⚠️ **Never commit your API key** to version control. The `.gitignore` file excludes `.env` and sensitive files.
