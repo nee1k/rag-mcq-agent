@@ -1,6 +1,7 @@
 """OpenAI API client with retry logic."""
 
-from openai import OpenAI, RateLimitError, APIError, APIConnectionError
+import openai
+from openai.error import RateLimitError, APIError, APIConnectionError
 import time
 import random
 from typing import Callable
@@ -18,7 +19,7 @@ class APIClient:
         Args:
             api_key: OpenAI API key
         """
-        self.client = OpenAI(api_key=api_key)
+        openai.api_key = api_key
         self.model = OPENAI_MODEL
     
     def call_with_retry(self, api_call_func: Callable, max_retries: int = API_MAX_RETRIES):
@@ -69,7 +70,7 @@ class APIClient:
             API response
         """
         return self.call_with_retry(
-            lambda: self.client.chat.completions.create(
+            lambda: openai.ChatCompletion.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}]
             )

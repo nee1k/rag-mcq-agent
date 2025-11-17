@@ -1,15 +1,30 @@
 # RAG MCQ Agent
 
-An intelligent Multiple Choice Question (MCQ) answering agent powered by Retrieval Augmented Generation (RAG) and GPT-3.5. Features a clean web interface for batch question processing and evaluation.
+## Working
+- Validate inputs, answer choices.
+- Retrieve context using RAG
+   - Get absolute path to textbook
+   - Processes textbook into chunks and generates embeddings
+      - Load textbook from file. Normalize whitespace but preserve structure
+      - Chunk text into List of chunk dictionaries with text, start_char, end_char, chunk_index
+      - Calculate SHA256 hash of textbook content to Verify textbook hasn't changed.
+      - Peprocessing textbook
+      - Chunking textbook
+      - Generating embeddings
+   - Retrieve top-k most relevant chunks for a query.
+   - Build Prompt (Context, Few shots)
+   - Call OpenAI API to get response for the question
+   - Extract answer
+      - CoT pattern matching (look for "Therefore", "Answer:", etc.)
+      - Extract letter using regex (case-insensitive)
+      - Extract number (0-3)
+      - Fuzzy match - search for substrings matching answer choices
 
-## Features
+## Evaluation
+The evaluation process is handled by [testbench.py](testbench.py), which reads questions, answer choices, and correct answers from [testbench.csv](data/testbench.csv). For each question, the agent predicts an answer by selecting from the provided options. The agent's response is compared to the correct choice, and a point is awarded for each correct match. The final score reflects the number of correct predictions out of the total number of questions.
 
-- **AI-Powered MCQ Answering**: Uses GPT-3.5 with advanced prompting techniques
-- **RAG-Enhanced**: Retrieves relevant context from medical textbooks using embeddings
-- **Web Interface**: Streamlit-based UI for CSV upload and interactive testing
-- **Docker Support**: Fully containerized with optimized CPU-only PyTorch build
-- **Automated Testing**: Statistical validation with testbench evaluation
-- **Robust Parsing**: Multiple strategies to extract answers from model responses
+All testbench run results are automatically stored in a PostgreSQL database. Each run is assigned a unique UUID, and results are stored with timestamps for historical analysis.
+
 
 ## Quick Start
 
@@ -18,6 +33,13 @@ An intelligent Multiple Choice Question (MCQ) answering agent powered by Retriev
 1. **Create `.env` file**:
    ```bash
    echo "OPENAI_API_KEY=your-api-key-here" > .env
+   ```
+   
+   Optional: Configure PostgreSQL connection (defaults provided):
+   ```bash
+   echo "POSTGRES_DB=rag_mcq_agent" >> .env
+   echo "POSTGRES_USER=rag_mcq_user" >> .env
+   echo "POSTGRES_PASSWORD=rag_mcq_password" >> .env
    ```
 
 2. **Start the application**:
@@ -35,9 +57,18 @@ An intelligent Multiple Choice Question (MCQ) answering agent powered by Retriev
    pip install -r requirements.txt
    ```
 
-2. **Set up API key**:
+2. **Set up API key and database**:
    ```bash
    echo "OPENAI_API_KEY=your-api-key-here" > .env
+   ```
+   
+   For local PostgreSQL (if not using Docker):
+   ```bash
+   echo "POSTGRES_HOST=localhost" >> .env
+   echo "POSTGRES_PORT=5432" >> .env
+   echo "POSTGRES_DB=rag_mcq_agent" >> .env
+   echo "POSTGRES_USER=your_db_user" >> .env
+   echo "POSTGRES_PASSWORD=your_db_password" >> .env
    ```
 
 3. **Run the web interface**:
@@ -73,7 +104,7 @@ id,question,answer_0,answer_1,answer_2,answer_3,correct
 
 **Run testbench**:
 ```bash
-python tests/testbench.py
+python testbench.py
 ```
 
 **Run with statistical validation** (for CI/CD):
@@ -84,7 +115,7 @@ python tests/run_tests_with_stats.py
 ### Programmatic Usage
 
 ```python
-from agent.hip_agent import HIPAgent
+from hip_agent import HIPAgent
 
 agent = HIPAgent()
 question = "What is a GMO?"
@@ -142,6 +173,23 @@ docker stop rag-mcq-agent && docker rm rag-mcq-agent
 - **Health Check**: Automatic monitoring every 30 seconds
 - **Environment**: `OPENAI_API_KEY` required (via `.env` file)
 - **Image Size**: ~150MB (CPU-only PyTorch optimized)
+- **PostgreSQL**: Included as a service in docker-compose, automatically starts with the application
+
+### Database
+
+The application uses PostgreSQL to store testbench results. When using Docker Compose, PostgreSQL is automatically configured and started. The database includes two tables:
+
+- **`questions`**: Stores question data from the testbench CSV (id, question, answer choices, correct answer)
+- **`runs`**: Stores individual question results for each testbench execution (run_id, question_id, user_response, is_correct, timestamp)
+
+**Database Environment Variables**:
+- `POSTGRES_HOST` (default: `postgres` in Docker, `localhost` locally)
+- `POSTGRES_PORT` (default: `5432`)
+- `POSTGRES_DB` (default: `rag_mcq_agent`)
+- `POSTGRES_USER` (default: `rag_mcq_user`)
+- `POSTGRES_PASSWORD` (default: `rag_mcq_password`)
+
+Tables are automatically created on first run. Database data persists in a Docker volume (`postgres_data`).
 
 ## How It Works
 
@@ -157,22 +205,23 @@ docker stop rag-mcq-agent && docker rm rag-mcq-agent
 ```
 rag-mcq-agent/
 ├── agent/              # Core agent implementation
-│   ├── hip_agent.py   # Main agent class
 │   ├── retriever.py   # RAG retrieval logic
 │   └── prompts.py     # Prompt construction
 ├── data/              # Test data and textbook
 │   ├── testbench.csv  # Sample questions
 │   └── textbook.txt   # Reference textbook
 ├── tests/             # Test scripts
-│   └── testbench.py  # Evaluation script
+│   └── run_tests_with_stats.py  # Statistical test runner
 ├── app.py            # Streamlit web interface
+├── testbench.py      # Evaluation script
+├── hip_agent.py      # Main agent class
 ├── Dockerfile        # Docker configuration
 └── requirements.txt  # Python dependencies
 ```
 
 ## Customization
 
-The agent can be enhanced by modifying `agent/hip_agent.py` while maintaining the `get_response(question, answer_choices)` interface.
+The agent can be enhanced by modifying `hip_agent.py` while maintaining the `get_response(question, answer_choices)` interface.
 
 **Potential Enhancements**:
 - Few-shot learning examples

@@ -1,6 +1,7 @@
 """RAG MCQ Agent source code."""
 
-from .hip_agent import HIPAgent
+# HIPAgent has been moved to the root directory
+# Import it directly: from hip_agent import HIPAgent
 
-__all__ = ['HIPAgent']
+__all__ = []
 
