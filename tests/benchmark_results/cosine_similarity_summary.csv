@@ -1,0 +1,2 @@
+total_questions,correct_count,accuracy_percentage,total_time_seconds,avg_latency_seconds,min_latency_seconds,max_latency_seconds,median_latency_seconds,agent_init_time_seconds,questions_per_second
+100,87,87.0,134.53476810455322,1.3453393363952637,0.5995137691497803,3.898073196411133,1.1652674674987793,6.9141387939453125e-06,0.7433022809559932
