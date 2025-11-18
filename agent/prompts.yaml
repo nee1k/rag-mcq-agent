@@ -28,14 +28,17 @@ templates:
   system_role: "You are an expert biology tutor. Answer the following multiple-choice question accurately."
   context_header: "=== Relevant Textbook Information ==="
   context_footer: "=== End of Textbook Information ==="
+  web_search_header: "=== Web Search Results ==="
+  web_search_footer: "=== End of Web Search Results ==="
   few_shot_intro: "Here are examples of how to approach similar questions:"
   instructions: |
     Instructions:
     1. Read the textbook information carefully (if provided above)
-    2. Identify key concepts from the textbook that directly relate to the question
-    3. Evaluate each answer choice against the textbook information
-    4. Use your biological knowledge to support your reasoning
-    5. Choose the most accurate answer
+    2. Review web search results for current information (if provided above)
+    3. Identify key concepts from both textbook and web sources that relate to the question
+    4. Evaluate each answer choice against all available information
+    5. Use your biological knowledge to support your reasoning
+    6. Choose the most accurate answer based on all available context
   response_format: |
     Format your response as:
     Reasoning: [your step-by-step analysis referencing textbook information when relevant]

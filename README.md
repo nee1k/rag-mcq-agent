@@ -1,89 +1,87 @@
-# RAG MCQ Agent
+<div align="center">
 
-A Retrieval-Augmented Generation (RAG) system for answering multiple-choice questions using context from a reference textbook. The agent combines semantic search with large language models to provide accurate answers to medical and scientific questions.
+# Hippocratic AI Coding Project
 
-![Architecture Diagram](data/image.png)
+[![Build Status](https://github.com/nee1k/rag-mcq-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/nee1k/rag-mcq-agent/actions)
 
-## Architecture
+A Retrieval-Augmented Generation (RAG) system for answering biomedical and life science multiple-choice questions using context from a reference textbook.
+
+</div>
+
+## Quick Start
+
+**Set up API keys**:
+   ```bash
+   echo "OPENAI_API_KEY=your-api-key-here" > .env
+   # Optional: Enable web search (requires Tavily API key)
+   echo "TAVILY_API_KEY=your-tavily-key-here" >> .env
+   echo "WEB_SEARCH_ENABLED=true" >> .env
+   ```
+
+### Using Docker
+   ```bash
+   docker compose up --build
+   ```
+
+### Using Python
+   ```bash
+   pip install -r requirements.txt
+   streamlit run app.py
+   ```
+   
+   Open `http://localhost:8501` in your browser to access the web interface.
+
+## How It Works
+
+<div align="center">
+<img src="data/image.png" alt="Architecture Diagram" width="300"/>
+</div>
 
 The agent follows a multi-stage pipeline:
 
-1. **Input Validation**: Validates question and answer choices format
+1. **Question Processing**: Receives query and answer choices, generates a query embedding
 2. **RAG Retrieval**: 
-   - Loads and processes textbook from file (normalizes whitespace, preserves structure)
-   - Chunks text into structured segments with metadata (text, start_char, end_char, chunk_index)
-   - Calculates a SHA256 hash of the textbook file to detect any modifications
-   - Preprocesses and generates embeddings for semantic search
-   - Retrieves top-k most relevant chunks for the query using vector similarity search (such as FAISS)
-   - Returns both the retrieved chunk texts and their positional metadata (e.g., start/end character indices, chunk index) for accurate context reconstruction
-3. **Prompt Construction**: Builds comprehensive prompt with:
-   - Retrieved context chunks
-   - Few-shot examples
-   - Chain-of-thought reasoning instructions
-4. **LLM Inference**: Calls OpenAI API (GPT-3.5-turbo) to generate response
-5. **Answer Extraction**: Multi-strategy parsing:
-   - Chain-of-thought pattern matching (looks for "Therefore", "Answer:", etc.)
-   - Letter extraction using regex (case-insensitive)
-   - Number extraction (0-3)
-   - Fuzzy matching for substrings matching answer choices
+   - Chunks textbook into segments with metadata (text, start_char, end_char, chunk_index)
+   - Generates embeddings (a 768-dimensional dense vector space) using [sentence transformer](https://huggingface.co/sentence-transformers/all-mpnet-base-v2)
+   - Caches embeddings into a [.npz file](https://numpy.org/devdocs/reference/generated/numpy.savez.html) with a SHA-256 hash 
+   - Retrieves top-k most relevant chunks for the query embedding using [FAISS](https://github.com/facebookresearch/faiss)
+
+3. **Web Search**: If enabled, performs web search using [Tavily API](https://tavily.com) to retrieve current information and complement textbook context
+
+4. **Prompt Construction**: Builds the prompt with retrieved textbook chunks, web search results, [few-shot examples](agent/prompts.yaml), and chain-of-thought reasoning instructions
+```
+[System Role]
+[Textbook Context Section]
+[Web Search Results Section]
+[Few-shot Examples]
+Now answer this NEW question:
+[Question]
+[Answer Choices]
+[Instructions] (updated to mention web search)
+[Response Format]
+```
+
+5. **LLM Inference**: Calls the OpenAI API (GPT-3.5-turbo) to generate a response
+
+6. **Answer Extraction**: Uses multiple parsing strategies (regex, fuzzy matching, pattern recognition)
+
+7. **Response**: Returns answer index (0-3) corresponding to the selected choice, or -1 if no valid match is found
 
 ## Evaluation
 
-The evaluation system is handled by [testbench.py](testbench.py), which reads questions, answer choices, and correct answers from [testbench.csv](data/testbench.csv). For each question, the agent predicts an answer by selecting from the provided options. The agent's response is compared to the correct choice, and a point is awarded for each correct match. The final score reflects the number of correct predictions out of the total number of questions.
+The evaluation is handled by [testbench.py](testbench.py), which reads questions, answer choices, and correct answers from [testbench.csv](testbench.csv). For each question, the agent predicts an answer by selecting from the provided options. The agent's response is compared to the correct choice, and a point is awarded for each correct match. The final score reflects the number of correct predictions out of the total number of questions.
 
 ## Performance
 
 The agent has been optimized with several performance improvements including FAISS vector search, parallel API processing, and binary cache formats. 
 
-All evaluations were conducted using a comprehensive set of multiple-choice biomedical and life science questions. The testing was performed in a virtual machine with 8 vCPUs, 30 GB of RAM, and 60 GB of local storage.
+All evaluations were conducted using a synthetic workload of [100 MCQs](tests/extended_testbench.csv) generated using [a python script](scripts/generate_questions.py). The testing was performed in a virtual machine with 8 vCPUs, 30 GB of RAM, and 60 GB of local storage.
 
-The following visualization shows the accuracy-latency trade-off comparing baseline vs improved configurations:
-
-![Performance Comparison](tests/benchmark_results/performance_comparison.png)
+<div align="center">
+<img src="tests/benchmark_results/performance_comparison.png" alt="Performance Comparison" width="300"/>
+</div>
 
 Accuracy increased from 58% to 89%, while latency was reduced by half and throughput almost doubled. All benchmarks were performed with textbook embeddings pre-cached.
-
-
-## Quick Start
-
-### Using Docker
-
-1. **Create `.env` file**:
-   ```bash
-   echo "OPENAI_API_KEY=your-api-key-here" > .env
-   ```
-
-2. **Start the application**:
-   ```bash
-   docker compose up --build
-   ```
-
-3. **Access the web interface**:
-   Open `http://localhost:8501` in your browser
-
-### Using Python
-
-1. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Set up API key and database**:
-   ```bash
-   echo "OPENAI_API_KEY=your-api-key-here" > .env
-   ```
-   
-3. **Run the web interface**:
-   ```bash
-   streamlit run app.py
-   ```
-
-## Requirements
-
-- **Python**: 3.10 or higher (or Docker)
-- **OpenAI API Key**: Required for LLM inference
-- **PostgreSQL**: Optional for local development (included in Docker Compose)
-- **Dependencies**: See `requirements.txt` for full list
 
 ## Usage
 
@@ -114,7 +112,6 @@ id,question,answer_0,answer_1,answer_2,answer_3,correct
 ```bash
 python testbench.py
 ```
-
 
 ### Programmatic Usage
 
@@ -175,45 +172,27 @@ docker stop rag-mcq-agent && docker rm rag-mcq-agent
 
 - **Port**: 8501 (Streamlit default)
 - **Health Check**: Automatic monitoring every 30 seconds
-- **Environment Variables**: `OPENAI_API_KEY` required (via `.env` file)
+- **Environment Variables**: 
+  - `OPENAI_API_KEY` required (via `.env` file)
+  - `TAVILY_API_KEY` optional (for web search feature)
+  - `WEB_SEARCH_ENABLED` optional (set to `true` to enable web search)
 - **Image Size**: ~150MB
-## How It Works
 
-The agent processes questions through the following workflow:
+## Web Search Feature
 
-1. **Question Processing**: Receives question and answer choices, validates input format
-2. **RAG Retrieval**: Retrieves relevant context from textbook using semantic embeddings
-3. **Prompt Construction**: Builds comprehensive prompt with context, few-shot examples, and chain-of-thought reasoning instructions
-4. **API Call**: Sends prompt to GPT-3.5-turbo via OpenAI API
-5. **Answer Extraction**: Uses multiple parsing strategies (regex, fuzzy matching, pattern recognition)
-6. **Response**: Returns answer index (0-3) corresponding to the selected choice, or -1 if no valid match is found
+The agent supports optional web search integration to complement textbook RAG retrieval with up-to-date information from the web.
 
-## Project Structure
+### Setup
 
-```
-rag-mcq-agent/
-├── agent/                    # Core agent implementation
-│   ├── __init__.py
-│   ├── config.py            # Configuration constants
-│   ├── retriever.py         # RAG retrieval logic
-│   ├── prompts.py           # Prompt construction
-│   ├── textbook_processor.py # Textbook processing and chunking
-│   └── utils/               # Utility modules
-│       ├── answer_parser.py # Answer extraction logic
-│       ├── api_client.py    # OpenAI API client
-│       └── validators.py    # Input validation
-├── data/                    # Test data and textbook
-│   ├── testbench.csv        # Sample questions
-│   └── textbook.txt         # Reference textbook
-├── tests/                   # Test scripts
-│   └── run_tests_with_stats.py  # Statistical test runner
-├── scripts/                 # Utility scripts
-│   └── generate_questions.py
-├── docs/                    # Documentation
-├── app.py                   # Streamlit web interface
-├── testbench.py             # Evaluation script
-├── hip_agent.py             # Main agent class
-├── Dockerfile               # Docker configuration
-├── docker-compose.yml       # Docker Compose configuration
-└── requirements.txt         # Python dependencies
-```
+1. **Get Tavily API Key**: Sign up at [https://tavily.com](https://tavily.com) (free tier available)
+
+2. **Configure Environment Variables**:
+   ```bash
+   echo "TAVILY_API_KEY=your-tavily-key-here" >> .env
+   echo "WEB_SEARCH_ENABLED=true" >> .env
+   ```
+
+3. **Optional Configuration**:
+   - `WEB_SEARCH_PROVIDER`: Search provider (default: `"tavily"`)
+   - `WEB_SEARCH_MAX_RESULTS`: Maximum web results to retrieve (default: `3`)
+   - `WEB_SEARCH_MIN_RELEVANCE`: Minimum relevance score threshold (default: `0.5`)

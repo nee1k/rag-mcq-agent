@@ -10,6 +10,7 @@ from agent.prompts import (
     build_main_prompt,
     build_basic_prompt,
     format_context_section,
+    format_web_search_section,
     format_few_shot_section,
     format_few_shot_examples
 )
@@ -21,7 +22,11 @@ from agent.config import (
     RAG_TOP_K_RETRIEVE,
     RAG_TOP_K_USE,
     MAX_PARALLEL_WORKERS,
-    PARALLEL_BATCH_SIZE
+    PARALLEL_BATCH_SIZE,
+    WEB_SEARCH_ENABLED,
+    WEB_SEARCH_PROVIDER,
+    WEB_SEARCH_MAX_RESULTS,
+    WEB_SEARCH_MIN_RELEVANCE
 )
 
 # Load environment variables from .env file
@@ -35,6 +40,22 @@ class HIPAgent:
         api_key = os.getenv("OPENAI_API_KEY")
         self.api_client = APIClient(api_key)
         self.answer_parser = AnswerParser()
+        
+        # Initialize web searcher if enabled
+        self.web_searcher = None
+        if WEB_SEARCH_ENABLED:
+            try:
+                from agent.web_searcher import WebSearcher
+                self.web_searcher = WebSearcher(
+                    provider=WEB_SEARCH_PROVIDER,
+                    api_key=None  # Will read from env
+                )
+                if not self.web_searcher.is_available():
+                    print("Warning: Web search enabled but not available. Continuing without web search.")
+                    self.web_searcher = None
+            except Exception as e:
+                print(f"Warning: Could not initialize web searcher: {e}. Continuing without web search.")
+                self.web_searcher = None
     
     def _get_retriever(self):
         """Lazy initialize retriever on first use (thread-safe)."""
@@ -60,13 +81,13 @@ class HIPAgent:
     
     def _retrieve_context(self, question: str) -> List[dict]:
         """
-        Retrieve relevant context using RAG.
+        Retrieve relevant context using RAG from textbook.
         
         Args:
             question: The question string
             
         Returns:
-            List of relevant chunks
+            List of relevant chunks from textbook
         """
         retrieved_chunks = []
         try:
@@ -81,19 +102,51 @@ class HIPAgent:
             print(f"Warning: RAG retrieval failed: {e}. Continuing without context.")
         return retrieved_chunks
     
-    def _build_prompt(self, question: str, answer_choices: List[str], retrieved_chunks: List[dict]) -> str:
+    def _retrieve_web_context(self, question: str) -> List[dict]:
+        """
+        Retrieve relevant context from web search.
+        
+        Args:
+            question: The question string
+            
+        Returns:
+            List of web search results
+        """
+        if not self.web_searcher or not self.web_searcher.is_available():
+            return []
+        
+        try:
+            results = self.web_searcher.search(
+                query=question,
+                max_results=WEB_SEARCH_MAX_RESULTS,
+                min_relevance=WEB_SEARCH_MIN_RELEVANCE
+            )
+            return results
+        except Exception as e:
+            print(f"Warning: Web search retrieval failed: {e}. Continuing without web context.")
+            return []
+    
+    def _build_prompt(self, question: str, answer_choices: List[str], 
+                     retrieved_chunks: List[dict], web_results: List[dict] = None) -> str:
         """
         Build the complete prompt with context and few-shot examples.
         
         Args:
             question: The question string
             answer_choices: List of answer choices
-            retrieved_chunks: List of retrieved context chunks
+            retrieved_chunks: List of retrieved context chunks from textbook
+            web_results: List of web search results (optional)
             
         Returns:
             Complete formatted prompt
         """
         context_section = format_context_section(retrieved_chunks, max_chunks=RAG_TOP_K_USE)
+        
+        # Format web search section if results are provided
+        web_search_section = ""
+        if web_results:
+            web_search_section = format_web_search_section(web_results)
+        
         few_shot_examples = format_few_shot_examples()
         examples_section = format_few_shot_section(few_shot_examples)
         
@@ -101,6 +154,7 @@ class HIPAgent:
             question=question,
             answer_choices=answer_choices,
             context_section=context_section,
+            web_search_section=web_search_section,
             few_shot_section=examples_section
         )
     
@@ -140,12 +194,16 @@ class HIPAgent:
             print(f"Error: {error}")
             return -1
         
-        # Retrieve context using RAG
+        # Retrieve context using RAG from textbook
         retrieved_chunks = self._retrieve_context(question)
         
-        # Build prompt
-        prompt = self._build_prompt(question, answer_choices, retrieved_chunks)
+        # Retrieve context from web search (if enabled)
+        web_results = []
+        if WEB_SEARCH_ENABLED and self.web_searcher:
+            web_results = self._retrieve_web_context(question)
         
+        # Build prompt
+        prompt = self._build_prompt(question, answer_choices, retrieved_chunks, web_results)
         # Call the OpenAI API with retry logic
         try:
             response = self.api_client.chat_completion(prompt)
