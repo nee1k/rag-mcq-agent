@@ -144,6 +144,8 @@ class PromptTemplates:
     SYSTEM_ROLE = _TemplateDescriptor("system_role")
     CONTEXT_HEADER = _TemplateDescriptor("context_header")
     CONTEXT_FOOTER = _TemplateDescriptor("context_footer")
+    WEB_SEARCH_HEADER = _TemplateDescriptor("web_search_header")
+    WEB_SEARCH_FOOTER = _TemplateDescriptor("web_search_footer")
     FEW_SHOT_INTRO = _TemplateDescriptor("few_shot_intro")
     INSTRUCTIONS = _TemplateDescriptor("instructions")
     RESPONSE_FORMAT = _TemplateDescriptor("response_format")
@@ -186,6 +188,39 @@ def format_context_section(retrieved_chunks: List[dict], max_chunks: int = 3) ->
     return f"""{PromptTemplates.CONTEXT_HEADER}
 {context_body}
 {PromptTemplates.CONTEXT_FOOTER}
+
+"""
+
+
+def format_web_search_section(web_results: List[dict]) -> str:
+    """
+    Format web search results into a context section.
+    
+    Args:
+        web_results: List of web search result dictionaries with 'title', 'url', 'content' keys
+        
+    Returns:
+        Formatted web search section string, or empty string if no results
+    """
+    if not web_results:
+        return ""
+    
+    result_texts = []
+    for i, result in enumerate(web_results, 1):
+        title = result.get("title", "Untitled")
+        url = result.get("url", "")
+        content = result.get("content", "")
+        
+        result_text = f"""[Result {i}]
+Title: {title}
+URL: {url}
+Content: {content}"""
+        result_texts.append(result_text)
+    
+    results_body = "\n\n".join(result_texts)
+    return f"""{PromptTemplates.WEB_SEARCH_HEADER}
+{results_body}
+{PromptTemplates.WEB_SEARCH_FOOTER}
 
 """
 
@@ -245,6 +280,7 @@ def build_main_prompt(
     question: str,
     answer_choices: List[str],
     context_section: str = "",
+    web_search_section: str = "",
     few_shot_section: str = ""
 ) -> str:
     """
@@ -254,6 +290,7 @@ def build_main_prompt(
         question: The question text
         answer_choices: List of answer choice strings
         context_section: Formatted RAG context section (optional)
+        web_search_section: Formatted web search results section (optional)
         few_shot_section: Formatted few-shot examples section (optional)
         
     Returns:
@@ -265,6 +302,7 @@ def build_main_prompt(
         PromptTemplates.SYSTEM_ROLE,
         "",
         context_section,
+        web_search_section,
         few_shot_section,
         "Now answer this NEW question:",
         "",
