@@ -231,57 +231,62 @@ class HIPAgent:
             print(f"Error: Unexpected error: {e}. Falling back to basic mode.")
             return self._get_response_basic(question, answer_choices)
     
-    def get_response(self, question, answer_choices):
+    def get_response(self, question, answer_choices=None, max_workers: int = 5):
         """
-        Calls the OpenAI 3.5 API to generate a response to the question.
-        The response is then matched to one of the answer choices and the index of the
-        matching answer choice is returned. If the response does not match any answer choice,
-        -1 is returned.
-
-        Args:
-            question: The question to be asked.
-            answer_choices: A list of answer choices.
-
-        Returns:
-            The index of the answer choice that matches the response, or -1 if the response
-            does not match any answer choice.
-        """
-        return self._answer_question(question, answer_choices)
-    
-    def get_responses_batch(self, questions: List[Tuple[str, List[str]]], max_workers: int = None) -> List[int]:
-        """
-        Process multiple questions in parallel using ThreadPoolExecutor.
+        Process question(s) and return answer index(ices).
+        
+        Can handle both single questions and batches:
+        - Single question: get_response(question, answer_choices) -> int
+        - Batch: get_response(questions) -> List[int]
+          where questions is List[Tuple[str, List[str]]]
+        
+        For batches, processes questions in parallel using ThreadPoolExecutor.
         
         Args:
-            questions: List of tuples (question, answer_choices)
-            max_workers: Maximum number of parallel workers (defaults to MAX_PARALLEL_WORKERS)
-            
+            question: Either:
+                - A single question string (when answer_choices is provided)
+                - A list of tuples (question, answer_choices) for batch processing
+            answer_choices: List of answer choices (for single question mode)
+            max_workers: Maximum number of parallel workers for batch processing
+                        (defaults to MAX_PARALLEL_WORKERS, ignored for single questions)
+        
         Returns:
-            List of answer indices corresponding to each question
+            - For single question: int (answer index, or -1 if no match)
+            - For batch: List[int] (answer indices corresponding to each question)
         """
-        if max_workers is None:
-            max_workers = MAX_PARALLEL_WORKERS
-        
-        # Pre-initialize retriever before parallel processing to avoid race conditions
-        self._get_retriever()
-        
-        results = [None] * len(questions)
-        
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all tasks
-            future_to_index = {
-                executor.submit(self._answer_question, question, answer_choices): idx
-                for idx, (question, answer_choices) in enumerate(questions)
-            }
+        # Detect if this is a batch (list of tuples) or single question
+        if isinstance(question, list) and len(question) > 0 and isinstance(question[0], tuple):
+            # Batch mode: question is actually a list of (question, answer_choices) tuples
+            questions = question
             
-            # Collect results as they complete
-            for future in as_completed(future_to_index):
-                idx = future_to_index[future]
-                try:
-                    results[idx] = future.result()
-                except Exception as e:
-                    print(f"Error processing question {idx}: {e}")
-                    results[idx] = -1
-        
-        return results
+            if max_workers is None:
+                max_workers = 5
+            
+            # Pre-initialize retriever before parallel processing to avoid race conditions
+            self._get_retriever()
+            
+            results = [None] * len(questions)
+            
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit all tasks
+                future_to_index = {
+                    executor.submit(self._answer_question, q, choices): idx
+                    for idx, (q, choices) in enumerate(questions)
+                }
+                
+                # Collect results as they complete
+                for future in as_completed(future_to_index):
+                    idx = future_to_index[future]
+                    try:
+                        results[idx] = future.result()
+                    except Exception as e:
+                        print(f"Error processing question {idx}: {e}")
+                        results[idx] = -1
+            
+            return results
+        else:
+            # Single question mode
+            if answer_choices is None:
+                raise ValueError("answer_choices must be provided for single question mode")
+            return self._answer_question(question, answer_choices)
 
