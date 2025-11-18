@@ -57,7 +57,7 @@ The agent follows a multi-stage pipeline:
 Now answer this NEW question:
 [Question]
 [Answer Choices]
-[Instructions] (updated to mention web search)
+[Instructions]
 [Response Format]
 ```
 
