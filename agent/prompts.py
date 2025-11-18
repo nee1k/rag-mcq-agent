@@ -1,68 +1,153 @@
 """Prompt templates and formatting utilities for HIPAgent."""
 
-from typing import List
+import logging
+import os
+from pathlib import Path
+from typing import Dict, List, Optional
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
+logger = logging.getLogger(__name__)
 
 
-# Few-shot examples demonstrating reasoning process
-FEW_SHOT_EXAMPLES = [
-    {
-        "question": "GMOs are created by ________",
-        "choices": [
-            "generating genomic DNA fragments with restriction endonucleases",
-            "introducing recombinant DNA into an organism by any means",
-            "overexpressing proteins in E. coli",
-            "all of the above"
-        ],
-        "reasoning": "GMOs are defined by introducing recombinant DNA (B). Option A is a technique, not the definition. Option C is about protein production. Option D is incorrect.",
-        "answer": "B"
-    },
-    {
-        "question": "Which scientific concept did Charles Darwin and Alfred Wallace independently discover?",
-        "choices": [
-            "mutation",
-            "natural selection",
-            "overbreeding",
-            "sexual reproduction"
-        ],
-        "reasoning": "Both Darwin and Wallace independently developed the theory of natural selection (B). Mutation was discovered later. Overbreeding and sexual reproduction were known concepts before their time.",
-        "answer": "B"
-    },
-    {
-        "question": "Which situation would most likely lead to allopatric speciation?",
-        "choices": [
-            "Flood causes the formation of a new lake",
-            "A storm causes several large trees to fall down",
-            "A mutation causes a new trait to develop",
-            "An injury"
-        ],
-        "reasoning": "Allopatric speciation requires geographic isolation. A new lake creates a geographic barrier separating populations (A). A storm is temporary. A mutation describes sympatric speciation. An injury affects an individual, not a population.",
-        "answer": "A"
-    }
-]
+class PromptsConfigurationError(Exception):
+    """Raised when prompts configuration file cannot be loaded or is invalid."""
+    pass
+
+# Cached prompts data
+_cached_prompts: Optional[Dict] = None
+
+
+def _load_prompts_from_file() -> Dict:
+    """
+    Load prompt templates from YAML file.
+    
+    Checks PROMPTS_FILE environment variable first, then falls back to
+    agent/prompts.yaml relative to this module's location.
+    
+    Returns:
+        Dictionary with 'few_shot_examples' and 'templates' keys
+        
+    Raises:
+        PromptsConfigurationError: If PyYAML is not installed, file is not found,
+            YAML is invalid, or required keys are missing
+    """
+    if yaml is None:
+        raise PromptsConfigurationError(
+            "PyYAML is not installed. Install it with: pip install pyyaml"
+        )
+    
+    # Determine file path
+    prompts_file = os.getenv("PROMPTS_FILE")
+    if prompts_file:
+        file_path = Path(prompts_file)
+    else:
+        # Default to prompts.yaml in the same directory as this module
+        module_dir = Path(__file__).parent
+        file_path = module_dir / "prompts.yaml"
+    
+    # Check if file exists
+    if not file_path.exists():
+        raise PromptsConfigurationError(
+            f"Prompts configuration file not found: {file_path}. "
+            f"Please create the file or set PROMPTS_FILE environment variable to point to a valid prompts file."
+        )
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+        
+        # Validate structure
+        if not isinstance(data, dict):
+            raise PromptsConfigurationError(
+                f"Invalid YAML structure in {file_path}: root must be a dictionary"
+            )
+        
+        if "few_shot_examples" not in data or "templates" not in data:
+            raise PromptsConfigurationError(
+                f"Invalid YAML structure in {file_path}: missing required keys. "
+                f"Expected 'few_shot_examples' and 'templates' at root level."
+            )
+        
+        logger.info(f"Successfully loaded prompts from {file_path}")
+        return data
+    
+    except yaml.YAMLError as e:
+        raise PromptsConfigurationError(
+            f"Error parsing YAML file {file_path}: {e}"
+        ) from e
+    except PromptsConfigurationError:
+        raise
+    except Exception as e:
+        raise PromptsConfigurationError(
+            f"Error reading prompts file {file_path}: {e}"
+        ) from e
+
+
+def _get_prompts() -> Dict:
+    """
+    Get prompts data, loading from file on first call (cached).
+    
+    Returns:
+        Dictionary with 'few_shot_examples' and 'templates' keys
+        
+    Raises:
+        PromptsConfigurationError: If prompts file cannot be loaded
+    """
+    global _cached_prompts
+    
+    if _cached_prompts is None:
+        _cached_prompts = _load_prompts_from_file()
+    
+    return _cached_prompts
+
+
+# Public API: FEW_SHOT_EXAMPLES (maintains backward compatibility)
+def _get_few_shot_examples() -> List[dict]:
+    """Get few-shot examples from loaded configuration."""
+    return _get_prompts()["few_shot_examples"]
+
+
+# For backward compatibility, expose as a list that's dynamically loaded
+class _FewShotExamplesList:
+    """Wrapper to maintain backward compatibility with FEW_SHOT_EXAMPLES list access."""
+    
+    def __iter__(self):
+        return iter(_get_few_shot_examples())
+    
+    def __getitem__(self, index):
+        return _get_few_shot_examples()[index]
+    
+    def __len__(self):
+        return len(_get_few_shot_examples())
+
+
+FEW_SHOT_EXAMPLES = _FewShotExamplesList()
+
+
+class _TemplateDescriptor:
+    """Descriptor for accessing template values dynamically."""
+    
+    def __init__(self, key: str):
+        self.key = key
+    
+    def __get__(self, obj, objtype=None):
+        return _get_prompts()["templates"].get(self.key, "")
 
 
 class PromptTemplates:
     """Centralized prompt templates for the HIP agent."""
     
-    SYSTEM_ROLE = "You are an expert biology tutor. Answer the following multiple-choice question accurately."
-    
-    CONTEXT_HEADER = "=== Relevant Textbook Information ==="
-    CONTEXT_FOOTER = "=== End of Textbook Information ==="
-    
-    FEW_SHOT_INTRO = "Here are examples of how to approach similar questions:"
-    
-    INSTRUCTIONS = """Instructions:
-1. Read the textbook information carefully (if provided above)
-2. Identify key concepts from the textbook that directly relate to the question
-3. Evaluate each answer choice against the textbook information
-4. Use your biological knowledge to support your reasoning
-5. Choose the most accurate answer"""
-    
-    RESPONSE_FORMAT = """Format your response as:
-Reasoning: [your step-by-step analysis referencing textbook information when relevant]
-Answer: [LETTER]"""
-    
-    BASIC_INSTRUCTION = "Respond with ONLY the letter (A, B, C, or D)."
+    SYSTEM_ROLE = _TemplateDescriptor("system_role")
+    CONTEXT_HEADER = _TemplateDescriptor("context_header")
+    CONTEXT_FOOTER = _TemplateDescriptor("context_footer")
+    FEW_SHOT_INTRO = _TemplateDescriptor("few_shot_intro")
+    INSTRUCTIONS = _TemplateDescriptor("instructions")
+    RESPONSE_FORMAT = _TemplateDescriptor("response_format")
+    BASIC_INSTRUCTION = _TemplateDescriptor("basic_instruction")
 
 
 def format_answer_choices(answer_choices: List[str]) -> str:
