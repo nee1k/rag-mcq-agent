@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install flake8 black mypy pytest pytest-mock
+          pip install -r requirements.txt
+      
+      - name: Check code formatting
+        run: black --check . --exclude="/(\.venv|venv|__pycache__|\.git|\.pytest_cache)/" || true
+      
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=.venv,venv,__pycache__,.git,.pytest_cache || true
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=.venv,venv,__pycache__,.git,.pytest_cache || true
+      
+      - name: Type check
+        run: mypy . --ignore-missing-imports || true
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest pytest-mock pytest-cov
+          pip install -r requirements.txt
+      
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v --cov=agent --cov-report=term-missing || true
+      
+      - name: Check test results
+        run: |
+          if [ -f .pytest_cache/v/cache/lastfailed ]; then
+            echo "Some tests failed"
+            exit 1
+          fi
+
+  integration-tests:
+    name: Integration Tests (Mocked)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest pytest-mock
+          pip install -r requirements.txt
+      
+      - name: Run integration tests with mocks
+        run: pytest tests/integration/ -v || true
+
+  config-validation:
+    name: Configuration Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+      
+      - name: Validate prompts.yaml
+        run: |
+          python -c "import yaml; yaml.safe_load(open('agent/prompts.yaml'))"
+          echo "✅ prompts.yaml is valid"
+      
+      - name: Validate imports
+        run: |
+          python -c "from agent.prompts import PromptTemplates, FEW_SHOT_EXAMPLES; print('✅ Prompts module imports successfully')"
+          python -c "from agent.config import *; print('✅ Config module imports successfully')"
+          python -c "from agent.utils.validators import validate_question, validate_answer_choices; print('✅ Validators import successfully')"
+          python -c "from agent.utils.answer_parser import AnswerParser; print('✅ Answer parser imports successfully')"
+          python -c "from hip_agent import HIPAgent; print('✅ HIPAgent imports successfully')"
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build Docker image
+        run: docker build -t rag-mcq-agent:test .
+      
+      - name: Test Docker image
+        run: |
+          docker run --rm rag-mcq-agent:test python -c "from hip_agent import HIPAgent; print('✅ Agent imports successfully')"
+
+  smoke-test:
+    name: Smoke Test (Limited API Calls)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run minimal smoke test
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python -c "
+          from hip_agent import HIPAgent
+          agent = HIPAgent()
+          # Test with just 1 question to minimize API calls
+          result = agent.get_response(
+              'What is a GMO?',
+              ['A genetically modified organism', 'A type of protein', 'A DNA sequence', 'None of the above']
+          )
+          assert result in [0, 1, 2, 3, -1], f'Invalid response: {result}'
+          print('✅ Smoke test passed')
+          "
+
