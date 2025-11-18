@@ -29,9 +29,6 @@ def load_summary_data(csv_path: str):
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            if row['type'] not in ('baseline', 'parallel_processing'):
-                continue
-
             data[row['type']] = {
                 'accuracy_percentage': float(row['accuracy_percentage']),
                 'avg_latency_seconds': float(row['avg_latency_seconds']),
@@ -51,15 +48,36 @@ def create_visualization(data, output_path: str):
             'label': 'Baseline',
             'color': COLORS['green'],
             'marker': 'o',
-            'size': 200,
-            'zorder': 2
+            'size': 100,
+            # 'zorder': 2
+        },
+        'cosine_similarity': {
+            'label': 'Cosine Similarity',
+            'color': '#ef476f',  # Hippocratic AI style red (coral red)
+            'marker': 's',
+            'size': 100,
+            # 'zorder': 5
+        },
+        'faiss_retrieval': {
+            'label': 'FAISS Retrieval',
+            'color': COLORS['cyan'],
+            'marker': 'D',
+            'size': 100,
+            # 'zorder': 5
         },
         'parallel_processing': {
-            'label': 'Improved',
-            'color': COLORS['cyan'],
-            'marker': 'o',
-            'size': 200,
-            'zorder': 5
+            'label': 'FAISS + Parallel Processing',
+            'color': COLORS['green'],
+            'marker': '^',
+            'size': 100,
+            # 'zorder': 5
+        },
+        'with_web_search': {
+            'label': 'FAISS + Parallel Processing + Web Search',
+            'color': COLORS['gray'],
+            'marker': 'P',
+            'size': 100,
+            # 'zorder': 5
         }
     }
 
@@ -94,21 +112,22 @@ def create_visualization(data, output_path: str):
                   edgecolors=COLORS['dark'],
                   linewidths=2,
                   label=config_props['label'],
-                  zorder=config_props['zorder'])
+                  # zorder=config_props['zorder']
+                  )
 
         # Annotate the label above each point
-        ax.annotate(
-            config_props['label'],
-            xy=(lat, acc),
-            xytext=(0, 12),
-            textcoords='offset points',
-            ha='center',
-            va='bottom',
-            fontsize=10,
-            fontweight='bold',
-            color=COLORS['dark'],
-            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec=COLORS['gray'], lw=0.7, alpha=0.8)
-        )
+        # ax.annotate(
+        #     config_props['label'],
+        #     xy=(lat, acc),
+        #     xytext=(0, 12),
+        #     textcoords='offset points',
+        #     ha='center',
+        #     va='bottom',
+        #     fontsize=10,
+        #     fontweight='bold',
+        #     color=COLORS['dark'],
+        #     bbox=dict(boxstyle="round,pad=0.3", fc="white", ec=COLORS['gray'], lw=0.7, alpha=0.8)
+        # )
 
     # Set axis labels with Hippocratic AI styling
     ax.set_xlabel('Latency per question (s)',
@@ -135,17 +154,25 @@ def create_visualization(data, output_path: str):
     ax.set_ylim(min(accuracies) - y_margin, min(100, max(accuracies) + y_margin))
 
     # Customize legend with rounded corners
-    # legend = ax.legend(loc='upper right',
-    #                   fontsize=11,
-    #                   framealpha=0.98,
-    #                   edgecolor=COLORS['gray'],
-    #                   fancybox=True,
-    #                   shadow=False,
-    #                   frameon=True,
-    #                   borderpad=1,
-    #                   labelspacing=0.8)
-    # legend.get_frame().set_facecolor('white')
-    # legend.get_frame().set_linewidth(1.5)
+    # Reduce marker size in legend via handler_map
+    handles, labels = ax.get_legend_handles_labels()
+    from matplotlib.legend_handler import HandlerPathCollection
+
+    # Create a mapping to draw smaller markers in legend
+    legend = ax.legend(
+        loc='lower right',
+        fontsize=7,
+        framealpha=0.98,
+        edgecolor=COLORS['gray'],
+        fancybox=True,
+        shadow=False,
+        frameon=True,
+        # borderpad=1,
+        labelspacing=0.8,
+        handler_map={type(handles[0]): HandlerPathCollection(marker_pad=0.5, numpoints=1, sizes=[30])}
+    )
+    legend.get_frame().set_facecolor('white')
+    legend.get_frame().set_linewidth(1.5)
 
     # Customize spines
     for spine in ax.spines.values():
