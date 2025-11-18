@@ -50,9 +50,12 @@ class AnswerParser:
             return int(number_match.group(1))
         
         # Strategy 4: Fuzzy match - search for substrings matching answer choices
+        # Only match if answer choice is substantial (more than 1 character) to avoid false matches
         response_lower = response_text.lower()
         for i, answer_choice in enumerate(answer_choices):
-            if answer_choice.lower() in response_lower:
+            choice_lower = answer_choice.lower().strip()
+            # Only match if choice is substantial (more than 1 char) and appears in response
+            if len(choice_lower) > 1 and choice_lower in response_lower:
                 return i
         
         # If no match found, return -1
