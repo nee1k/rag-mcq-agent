@@ -2,7 +2,7 @@
 
 # Hippocratic AI Coding Project
 
-[![Build Status](https://github.com/nee1k/rag-mcq-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/nee1k/rag-mcq-agent/actions)
+[![CI](https://github.com/nee1k/rag-mcq-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/nee1k/rag-mcq-agent/actions/workflows/ci.yml)
 
 A Retrieval-Augmented Generation (RAG) system for answering biomedical and life science multiple-choice questions using context from a reference textbook.
 
@@ -34,7 +34,7 @@ A Retrieval-Augmented Generation (RAG) system for answering biomedical and life 
 ## How It Works
 
 <div align="center">
-<img src="data/image.png" alt="Architecture Diagram" width="300"/>
+<img src="data/image.png" alt="Architecture Diagram" width="600"/>
 </div>
 
 The agent follows a multi-stage pipeline:
@@ -78,7 +78,7 @@ The agent has been optimized with several performance improvements including FAI
 All evaluations were conducted using a synthetic workload of [100 MCQs](tests/extended_testbench.csv) generated using [a python script](scripts/generate_questions.py). The testing was performed in a virtual machine with 8 vCPUs, 30 GB of RAM, and 60 GB of local storage.
 
 <div align="center">
-<img src="tests/benchmark_results/performance_comparison.png" alt="Performance Comparison" width="300"/>
+<img src="tests/benchmark_results/performance_comparison.png" alt="Performance Comparison" width="600"/>
 </div>
 
 Accuracy increased from 58% to 89%, while latency was reduced by half and throughput almost doubled. All benchmarks were performed with textbook embeddings pre-cached.
