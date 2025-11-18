@@ -74,7 +74,7 @@ def process_questions(data, headers):
     # Process questions in parallel
     progress_bar.progress(0.1)
     from agent.config import MAX_PARALLEL_WORKERS
-    response_indices = agent.get_responses_batch(questions, max_workers=MAX_PARALLEL_WORKERS)
+    response_indices = agent.get_response(questions, max_workers=MAX_PARALLEL_WORKERS)
     progress_bar.progress(0.9)
     
     # Build results

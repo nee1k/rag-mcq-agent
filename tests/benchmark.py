@@ -72,7 +72,7 @@ def run_benchmark(testbench_path: str, output_path: str = None) -> Dict:
     # Process questions in parallel
     print(f"\nProcessing {len(questions)} questions with {MAX_PARALLEL_WORKERS} parallel workers...")
     total_start_time = time.time()
-    response_indices = agent.get_responses_batch(questions, max_workers=MAX_PARALLEL_WORKERS)
+    response_indices = agent.get_response(questions, max_workers=MAX_PARALLEL_WORKERS)
     total_time = time.time() - total_start_time
     
     # Calculate per-question latency (approximate: total_time / num_questions)
