@@ -127,7 +127,7 @@ jobs:
       
       - name: Test Docker image
         run: |
-          docker run --rm rag-mcq-agent:test python -c "from hip_agent import HIPAgent; print('✅ Agent imports successfully')"
+          docker run --rm rag-mcq-agent:test python -c "from hip_agent import HIPAgent; print('✅ Docker image imports successfully')"
 
   smoke-test:
     name: Smoke Test (Limited API Calls)

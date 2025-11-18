@@ -28,6 +28,7 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 COPY agent/ ./agent/
 COPY data/ ./data/
 COPY app.py .
+COPY hip_agent.py .
 COPY .streamlit/ ./.streamlit/
 
 # Create a non-root user to run the application
