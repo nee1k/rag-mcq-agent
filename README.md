@@ -1,6 +1,6 @@
 <div align="center">
 
-# Hippocratic AI Coding Project
+# RAG MCQ Agent
 
 [![CI](https://github.com/nee1k/rag-mcq-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/nee1k/rag-mcq-agent/actions/workflows/ci.yml)
 
